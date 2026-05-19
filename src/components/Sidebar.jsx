@@ -19,6 +19,33 @@ const Sidebar = ({ isOpen, closeSidebar }) => {
   const { user, logout, stations, simulatorStatus, activeSession, startSession, addNotification } = useAppContext();
   const navigate = useNavigate();
   const [scannerOpen, setScannerOpen] = React.useState(false);
+  const [batteryPercent, setBatteryPercent] = React.useState(20);
+  const [notifiedCompleted, setNotifiedCompleted] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!activeSession) {
+      setBatteryPercent(20);
+      setNotifiedCompleted(false);
+      return;
+    }
+
+    const calculateBattery = () => {
+      const elapsedMs = Date.now() - new Date(activeSession.startTime).getTime();
+      const elapsedSec = Math.floor(elapsedMs / 1000);
+      // Reach 100% in approx 50 seconds (1.6% per second)
+      const currentPct = Math.min(100, 20 + Math.floor(elapsedSec * 1.6));
+      setBatteryPercent(currentPct);
+
+      if (currentPct === 100 && !notifiedCompleted) {
+        addNotification("⚡ Charging Completed! Your vehicle battery is at 100%.", "success");
+        setNotifiedCompleted(true);
+      }
+    };
+
+    calculateBattery();
+    const interval = setInterval(calculateBattery, 1000);
+    return () => clearInterval(interval);
+  }, [activeSession, notifiedCompleted]);
 
   const available = stations.filter(s => s.status === 'available' || s.status === 'reserved').length;
   const charging  = stations.filter(s => s.status === 'charging' || s.status === 'occupied').length;
@@ -123,6 +150,70 @@ const Sidebar = ({ isOpen, closeSidebar }) => {
         <QrCode size={20} />
         <span style={{ fontWeight: 800, letterSpacing: '0.02em' }}>Scan Station QR</span>
       </button>
+
+      {/* Active Charging Session Widget */}
+      {activeSession && (
+        <div style={{ 
+          margin: '0 0.75rem 1rem', 
+          padding: '1rem', 
+          borderRadius: 'var(--radius-md)', 
+          background: 'var(--bg-tertiary)', 
+          border: '1px solid var(--accent-primary)',
+          boxShadow: '0 0 15px rgba(57, 255, 20, 0.15)'
+        }}>
+          <p style={{ 
+            fontSize: '0.65rem', 
+            fontWeight: 800, 
+            color: 'var(--accent-primary)', 
+            marginBottom: '0.5rem', 
+            letterSpacing: '0.08em', 
+            textTransform: 'uppercase',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <span>Active Charging</span>
+            <span className="live-dot" style={{ background: 'var(--accent-primary)' }} />
+          </p>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '0.5rem 0' }}>
+            <svg viewBox="0 0 90 32" width="100%" height="45">
+              <defs>
+                <linearGradient id="car-fill" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset={`${batteryPercent}%`} stopColor="var(--accent-primary)" />
+                  <stop offset={`${batteryPercent}%`} stopColor="rgba(255,255,255,0.08)" />
+                </linearGradient>
+              </defs>
+              <path 
+                d="M10,22 L8,22 C5.8,22 4,20.2 4,18 L4,14 C4,10.7 6.7,8 10,8 L20,8 L28,2 C30,0.5 33,0.5 35,2 L43,8 L76,8 C79.3,8 82,10.7 82,14 L82,18 C82,20.2 80.2,22 78,22 L76,22 C76,18 72,14 67,14 C62,14 58,18 58,22 L32,22 C32,18 28,14 23,14 C18,14 14,18 14,22 Z" 
+                fill="url(#car-fill)" 
+                stroke={batteryPercent === 100 ? "var(--accent-primary)" : "rgba(255,255,255,0.2)"} 
+                strokeWidth="1.5"
+              />
+              <circle cx="23" cy="22" r="4.5" fill="#080f1e" stroke="rgba(255,255,255,0.3)" strokeWidth="1.2" />
+              <circle cx="23" cy="22" r="1.5" fill={batteryPercent > 25 ? 'var(--accent-primary)' : 'rgba(255,255,255,0.2)'} />
+              <circle cx="67" cy="22" r="4.5" fill="#080f1e" stroke="rgba(255,255,255,0.3)" strokeWidth="1.2" />
+              <circle cx="67" cy="22" r="1.5" fill={batteryPercent > 75 ? 'var(--accent-primary)' : 'rgba(255,255,255,0.2)'} />
+            </svg>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginTop: '0.25rem' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Battery State</span>
+              <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)' }}>{batteryPercent}%</span>
+            </div>
+          </div>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.5rem', marginTop: '0.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+              <span style={{ color: 'var(--text-secondary)' }}>Station:</span>
+              <span style={{ fontWeight: 600, color: 'var(--text-primary)', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activeSession.stationName}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+              <span style={{ color: 'var(--text-secondary)' }}>Delivered:</span>
+              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{(batteryPercent * 0.45).toFixed(1)} kWh</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Live Stats Mini */}
       <div style={{ margin: '0 0.75rem 0.75rem', padding: '1rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)' }}>
