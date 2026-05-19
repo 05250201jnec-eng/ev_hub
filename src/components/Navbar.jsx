@@ -1,9 +1,53 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Bell, User, Zap, Wifi, WifiOff, Menu } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 
 const Navbar = ({ toggleSidebar }) => {
-  const { user, simulatorStatus, searchQuery, setSearchQuery } = useAppContext();
+  const { user, simulatorStatus, searchQuery, setSearchQuery, bookings } = useAppContext();
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [reminders, setReminders] = useState([]);
+
+  useEffect(() => {
+    const checkReminders = () => {
+      if (!user || !bookings) return;
+      const now = new Date();
+      const upcoming = [];
+
+      bookings.forEach(b => {
+        if (b.userId === user.id && ['pending', 'confirmed'].includes(b.status)) {
+          const dateStr = b.date || now.toISOString().split('T')[0];
+          const dateParts = dateStr.split('-');
+          if (!b.time) return;
+          const timeParts = b.time.match(/(\d+):(\d+)\s(AM|PM)/);
+          
+          if (dateParts.length === 3 && timeParts) {
+            let hours = parseInt(timeParts[1]);
+            const mins = parseInt(timeParts[2]);
+            const ampm = timeParts[3];
+            if (ampm === 'PM' && hours < 12) hours += 12;
+            if (ampm === 'AM' && hours === 12) hours = 0;
+            
+            const bookingDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2], hours, mins);
+            const diffMs = bookingDate - now;
+            const diffMins = Math.floor(diffMs / 60000);
+            
+            if (diffMins > 0 && diffMins <= 15) {
+              upcoming.push({
+                id: b.id,
+                message: `Upcoming reservation at ${b.stationName} in ${diffMins} minutes!`,
+                time: b.time
+              });
+            }
+          }
+        }
+      });
+      setReminders(upcoming);
+    };
+
+    checkReminders();
+    const interval = setInterval(checkReminders, 30000); // Check every 30s
+    return () => clearInterval(interval);
+  }, [bookings, user]);
 
   return (
     <header className="glass" style={{
@@ -73,22 +117,73 @@ const Navbar = ({ toggleSidebar }) => {
         </div>
 
         {/* Notifications */}
-        <button style={{ position: 'relative', color: 'var(--text-secondary)', transition: 'all 0.2s' }} 
-          onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
-          onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'}
-        >
-          <Bell size={20} />
-          <span style={{
-            position: 'absolute',
-            top: -2,
-            right: -2,
-            background: 'var(--accent-primary)',
-            width: 8,
-            height: 8,
-            borderRadius: '50%',
-            border: '2px solid var(--bg-color)',
-          }}></span>
-        </button>
+        <div style={{ position: 'relative' }}>
+          <button 
+            onClick={() => setShowNotifications(!showNotifications)}
+            style={{ position: 'relative', color: 'var(--text-secondary)', transition: 'all 0.2s', background: 'none', border: 'none', cursor: 'pointer' }} 
+            onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'}
+          >
+            <Bell size={20} />
+            {reminders.length > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: -4,
+                right: -4,
+                background: 'var(--accent-primary)',
+                color: '#080f1e',
+                fontSize: '0.65rem',
+                fontWeight: 900,
+                width: 16,
+                height: 16,
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '2px solid var(--bg-color)',
+              }}>
+                {reminders.length}
+              </span>
+            )}
+          </button>
+
+          {showNotifications && (
+            <div className="glass animate-fade-in" style={{
+              position: 'absolute',
+              top: '100%',
+              right: '-2rem',
+              marginTop: '1.5rem',
+              width: '320px',
+              borderRadius: 'var(--radius-md)',
+              padding: '1.25rem',
+              boxShadow: 'var(--shadow-lg)',
+              zIndex: 1000
+            }}>
+              <h3 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.75rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', color: 'var(--text-primary)' }}>
+                Notifications
+              </h3>
+              {reminders.length === 0 ? (
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.8125rem', textAlign: 'center', margin: '1.5rem 0' }}>
+                  No upcoming reminders.
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {reminders.map(r => (
+                    <div key={r.id} style={{
+                      padding: '0.875rem',
+                      background: 'rgba(57, 255, 20, 0.08)',
+                      borderLeft: '3px solid var(--accent-primary)',
+                      borderRadius: 'var(--radius-sm)',
+                    }}>
+                      <p style={{ fontSize: '0.8125rem', margin: 0, color: 'var(--text-primary)', fontWeight: 600, lineHeight: 1.4 }}>{r.message}</p>
+                      <p style={{ fontSize: '0.7rem', color: 'var(--accent-primary)', margin: 0, marginTop: '0.4rem', fontWeight: 700 }}>Scheduled: {r.time}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* User Info */}
         <div className="navbar-user-info" style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', paddingLeft: '1.5rem', borderLeft: '1px solid var(--border-color)' }}>
