@@ -275,14 +275,30 @@ const Sidebar = ({ isOpen, closeSidebar }) => {
                const utcToday = now.toISOString().split('T')[0];
                const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
                const todayStrings = [utcToday, localToday];
+               const currentHour = now.getHours();
 
-               const myBooking = bookings.find(b => 
+               const convert12to24 = (timeStr) => {
+                 if (!timeStr) return -1;
+                 const [time, modifier] = timeStr.split(' ');
+                 let [hours] = time.split(':').map(Number);
+                 if (hours === 12) hours = 0;
+                 if (modifier === 'PM') hours += 12;
+                 return hours;
+               };
+
+               const todayBookings = bookings.filter(b => 
                  b.userId === user.id &&
                  (todayStrings.includes(b.date) || !b.date) &&
                  ['pending', 'confirmed'].includes(b.status)
                );
+
+               const myBooking = todayBookings.find(b => convert12to24(b.time) === currentHour);
+
                if (myBooking) {
                  targetId = myBooking.stationId;
+               } else if (todayBookings.length > 0) {
+                 addNotification(`Reservation time mismatch (reserved: ${todayBookings[0].time})`, "error");
+                 return;
                } else {
                  addNotification("You must reserve a station first to scan!", "error");
                  return;

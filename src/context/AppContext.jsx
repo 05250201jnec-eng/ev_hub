@@ -486,16 +486,38 @@ export const AppProvider = ({ children }) => {
       const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       const todayStrings = [utcToday, localToday];
       
-      // AUTHENTICATION CHECK: Verify user has an active booking for this station today
+      const currentHour = now.getHours();
+
+      const convert12to24 = (timeStr) => {
+        if (!timeStr) return -1;
+        const [time, modifier] = timeStr.split(' ');
+        let [hours] = time.split(':').map(Number);
+        if (hours === 12) hours = 0;
+        if (modifier === 'PM') hours += 12;
+        return hours;
+      };
+      
+      // AUTHENTICATION CHECK: Verify user has an active booking for this station today and now
       const activeBooking = bookings.find(b => 
         b.stationId === stationId && 
         b.userId === user.id &&
         (todayStrings.includes(b.date) || !b.date) &&
+        convert12to24(b.time) === currentHour &&
         ['pending', 'confirmed'].includes(b.status)
       );
 
       if (!activeBooking) {
-        addNotification('You must reserve this station first to scan!', 'error');
+        const otherBooking = bookings.find(b => 
+          b.stationId === stationId && 
+          b.userId === user.id &&
+          (todayStrings.includes(b.date) || !b.date) &&
+          ['pending', 'confirmed'].includes(b.status)
+        );
+        if (otherBooking) {
+          addNotification(`Reservation time mismatch (reserved: ${otherBooking.time})`, 'error');
+        } else {
+          addNotification('You must reserve this station first to scan!', 'error');
+        }
         return null;
       }
 

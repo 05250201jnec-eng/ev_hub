@@ -88,38 +88,55 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
             stationId = parts[parts.length - 1];
           }
 
+          const convert12to24 = (timeStr) => {
+            if (!timeStr) return -1;
+            const [time, modifier] = timeStr.split(' ');
+            let [hours] = time.split(':').map(Number);
+            if (hours === 12) hours = 0;
+            if (modifier === 'PM') hours += 12;
+            return hours;
+          };
+          const currentHour = now.getHours();
+
           let finalStationId = stationId;
           let activeBooking = null;
 
-          if (stationId === 'universal') {
-            activeBooking = bookings.find(b => 
-              b.userId === user.id &&
-              (todayStrings.includes(b.date) || !b.date) &&
-              ['pending', 'confirmed'].includes(b.status)
-            );
-            if (activeBooking) {
-              finalStationId = activeBooking.stationId;
-            }
-          } else {
-            activeBooking = bookings.find(b => 
-              b.stationId === stationId && 
-              b.userId === user.id &&
-              (todayStrings.includes(b.date) || !b.date) &&
-              ['pending', 'confirmed'].includes(b.status)
-            );
-          }
+          const todayBookings = bookings.filter(b => 
+            b.userId === user.id &&
+            (stationId === 'universal' || b.stationId === stationId) &&
+            (todayStrings.includes(b.date) || !b.date) &&
+            ['pending', 'confirmed'].includes(b.status)
+          );
 
-          if (!activeBooking) {
+          if (todayBookings.length === 0) {
             setSteps(prev => prev.map((s, idx) => idx === 2 ? { ...s, status: 'failed' } : s));
             setScanState('failed');
             setErrorMessage('You must reserve a station first to scan!');
             addNotification('You must reserve a station first to scan!', 'error');
             
-            // Automatically redirect to dashboard after 1.8 seconds
             setTimeout(() => {
               handleClose();
-            }, 1800);
+            }, 2500);
             return;
+          }
+
+          activeBooking = todayBookings.find(b => convert12to24(b.time) === currentHour);
+
+          if (!activeBooking) {
+            const nextBooking = todayBookings[0];
+            setSteps(prev => prev.map((s, idx) => idx === 2 ? { ...s, status: 'failed' } : s));
+            setScanState('failed');
+            setErrorMessage(`Time mismatch! Your reservation is for ${nextBooking.time}. Please scan during your reserved hour.`);
+            addNotification(`Reservation time mismatch (reserved: ${nextBooking.time})`, 'error');
+            
+            setTimeout(() => {
+              handleClose();
+            }, 3000);
+            return;
+          }
+
+          if (stationId === 'universal') {
+            finalStationId = activeBooking.stationId;
           }
 
           setSteps(prev => prev.map((s, idx) => idx === 2 ? { ...s, status: 'success' } : s));
@@ -242,22 +259,46 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
         const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         const todayStrings = [utcToday, localToday];
 
-        const activeBooking = bookings.find(b => 
+        const convert12to24 = (timeStr) => {
+          if (!timeStr) return -1;
+          const [time, modifier] = timeStr.split(' ');
+          let [hours] = time.split(':').map(Number);
+          if (hours === 12) hours = 0;
+          if (modifier === 'PM') hours += 12;
+          return hours;
+        };
+        const currentHour = now.getHours();
+
+        const todayBookings = bookings.filter(b => 
           b.userId === user.id &&
           (todayStrings.includes(b.date) || !b.date) &&
           ['pending', 'confirmed'].includes(b.status)
         );
 
-        if (!activeBooking) {
+        if (todayBookings.length === 0) {
           setSteps(prev => prev.map((s, idx) => idx === 2 ? { ...s, status: 'failed' } : s));
           setScanState('failed');
           setErrorMessage('You must reserve a station first to scan!');
           addNotification('You must reserve a station first to scan!', 'error');
           
-          // Auto redirect to dashboard after 1.8 seconds
           setTimeout(() => {
             handleClose();
-          }, 1800);
+          }, 2500);
+          return;
+        }
+
+        const activeBooking = todayBookings.find(b => convert12to24(b.time) === currentHour);
+
+        if (!activeBooking) {
+          const nextBooking = todayBookings[0];
+          setSteps(prev => prev.map((s, idx) => idx === 2 ? { ...s, status: 'failed' } : s));
+          setScanState('failed');
+          setErrorMessage(`Time mismatch! Your reservation is for ${nextBooking.time}. Please scan during your reserved hour.`);
+          addNotification(`Reservation time mismatch (reserved: ${nextBooking.time})`, 'error');
+          
+          setTimeout(() => {
+            handleClose();
+          }, 3000);
           return;
         }
 
