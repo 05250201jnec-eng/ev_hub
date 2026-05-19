@@ -45,9 +45,39 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
         const handleSuccess = (decodedText) => {
           // Immediately mark inactive to prevent unmount double-stop
           isCameraActive.current = false;
-          html5QrCode.stop().catch(err => console.warn(err));
+          
+          // Stop camera FIRST. Only transition state when stopped, keeping the DOM container alive
+          html5QrCode.stop().then(() => {
+            setScanState('verifying');
+            runVerification(decodedText);
+          }).catch(err => {
+            console.warn("Error stopping scanner, forcing transition:", err);
+            setScanState('verifying');
+            runVerification(decodedText);
+          });
+        };
 
-          setScanState('verifying');
+        // Define verification inside useEffect to have access to scope
+        const runVerification = async (decodedText) => {
+          // Step 1: Read QR
+          setSteps(prev => prev.map((s, idx) => idx === 0 ? { ...s, status: 'success' } : s));
+          setCurrentStep(1);
+          await new Promise(r => setTimeout(r, 600));
+
+          // Step 2: Verify User
+          if (!user) {
+            setSteps(prev => prev.map((s, idx) => idx === 1 ? { ...s, status: 'failed' } : s));
+            setScanState('failed');
+            setErrorMessage('No authenticated user found. Please login.');
+            return;
+          }
+          setSteps(prev => prev.map((s, idx) => idx === 1 ? { ...s, status: 'success' } : s));
+          setCurrentStep(2);
+          await new Promise(r => setTimeout(r, 600));
+
+          // Step 3: Check Reservation
+          const now = new Date();
+          const todayStr = now.toISOString().split('T')[0];
           
           let stationId = decodedText;
           if (decodedText.includes('universal') || decodedText === 'ev-hub-universal') {
@@ -57,79 +87,53 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
             stationId = parts[parts.length - 1];
           }
 
-          // Run step-by-step verification animation with real checks
-          const runVerification = async () => {
-            // Step 1: Read QR
-            setSteps(prev => prev.map((s, idx) => idx === 0 ? { ...s, status: 'success' } : s));
-            setCurrentStep(1);
-            await new Promise(r => setTimeout(r, 600));
+          let finalStationId = stationId;
+          let activeBooking = null;
 
-            // Step 2: Verify User
-            if (!user) {
-              setSteps(prev => prev.map((s, idx) => idx === 1 ? { ...s, status: 'failed' } : s));
-              setScanState('failed');
-              setErrorMessage('No authenticated user found. Please login.');
-              return;
+          if (stationId === 'universal') {
+            activeBooking = bookings.find(b => 
+              b.userId === user.id &&
+              (b.date === todayStr || !b.date) &&
+              ['pending', 'confirmed'].includes(b.status)
+            );
+            if (activeBooking) {
+              finalStationId = activeBooking.stationId;
             }
-            setSteps(prev => prev.map((s, idx) => idx === 1 ? { ...s, status: 'success' } : s));
-            setCurrentStep(2);
-            await new Promise(r => setTimeout(r, 600));
+          } else {
+            activeBooking = bookings.find(b => 
+              b.stationId === stationId && 
+              b.userId === user.id &&
+              (b.date === todayStr || !b.date) &&
+              ['pending', 'confirmed'].includes(b.status)
+            );
+          }
 
-            // Step 3: Check Reservation
-            const now = new Date();
-            const todayStr = now.toISOString().split('T')[0];
+          if (!activeBooking) {
+            setSteps(prev => prev.map((s, idx) => idx === 2 ? { ...s, status: 'failed' } : s));
+            setScanState('failed');
+            setErrorMessage('You must reserve a station first to scan!');
+            addNotification('You must reserve a station first to scan!', 'error');
             
-            // Resolve universal station ID if needed
-            let finalStationId = stationId;
-            let activeBooking = null;
-
-            if (stationId === 'universal') {
-              activeBooking = bookings.find(b => 
-                b.userId === user.id &&
-                (b.date === todayStr || !b.date) &&
-                ['pending', 'confirmed'].includes(b.status)
-              );
-              if (activeBooking) {
-                finalStationId = activeBooking.stationId;
-              }
-            } else {
-              activeBooking = bookings.find(b => 
-                b.stationId === stationId && 
-                b.userId === user.id &&
-                (b.date === todayStr || !b.date) &&
-                ['pending', 'confirmed'].includes(b.status)
-              );
-            }
-
-            if (!activeBooking) {
-              setSteps(prev => prev.map((s, idx) => idx === 2 ? { ...s, status: 'failed' } : s));
-              setScanState('failed');
-              setErrorMessage('You must reserve a station first to scan!');
-              addNotification('You must reserve a station first to scan!', 'error');
-              
-              // Automatically redirect to dashboard after 1.8 seconds
-              setTimeout(() => {
-                onClose();
-              }, 1800);
-              return;
-            }
-
-            setSteps(prev => prev.map((s, idx) => idx === 2 ? { ...s, status: 'success' } : s));
-            setCurrentStep(3);
-            await new Promise(r => setTimeout(r, 600));
-
-            // Step 4: Unlock Solenoid
-            setSteps(prev => prev.map((s, idx) => idx === 3 ? { ...s, status: 'success' } : s));
-            await new Promise(r => setTimeout(r, 500));
-
-            setScanState('success');
+            // Automatically redirect to dashboard after 1.8 seconds
             setTimeout(() => {
-              onScanSuccess(stationId);
               onClose();
-            }, 1000);
-          };
+            }, 1800);
+            return;
+          }
 
-          runVerification();
+          setSteps(prev => prev.map((s, idx) => idx === 2 ? { ...s, status: 'success' } : s));
+          setCurrentStep(3);
+          await new Promise(r => setTimeout(r, 600));
+
+          // Step 4: Unlock Solenoid
+          setSteps(prev => prev.map((s, idx) => idx === 3 ? { ...s, status: 'success' } : s));
+          await new Promise(r => setTimeout(r, 500));
+
+          setScanState('success');
+          setTimeout(() => {
+            onScanSuccess(stationId);
+            onClose();
+          }, 1000);
         };
 
         html5QrCode.start(
@@ -198,67 +202,77 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
     
     // Simulate reading 'universal' QR code
     isCameraActive.current = false;
-    if (scannerRef.current) {
-      scannerRef.current.stop().catch(err => console.warn(err));
-    }
 
-    setScanState('verifying');
+    const startVerification = () => {
+      setScanState('verifying');
 
-    const runVerification = async () => {
-      // Step 1
-      setSteps(prev => prev.map((s, idx) => idx === 0 ? { ...s, status: 'success' } : s));
-      setCurrentStep(1);
-      await new Promise(r => setTimeout(r, 600));
+      const runVerification = async () => {
+        // Step 1
+        setSteps(prev => prev.map((s, idx) => idx === 0 ? { ...s, status: 'success' } : s));
+        setCurrentStep(1);
+        await new Promise(r => setTimeout(r, 600));
 
-      // Step 2
-      if (!user) {
-        setSteps(prev => prev.map((s, idx) => idx === 1 ? { ...s, status: 'failed' } : s));
-        setScanState('failed');
-        setErrorMessage('No authenticated user found.');
-        return;
-      }
-      setSteps(prev => prev.map((s, idx) => idx === 1 ? { ...s, status: 'success' } : s));
-      setCurrentStep(2);
-      await new Promise(r => setTimeout(r, 600));
+        // Step 2
+        if (!user) {
+          setSteps(prev => prev.map((s, idx) => idx === 1 ? { ...s, status: 'failed' } : s));
+          setScanState('failed');
+          setErrorMessage('No authenticated user found.');
+          return;
+        }
+        setSteps(prev => prev.map((s, idx) => idx === 1 ? { ...s, status: 'success' } : s));
+        setCurrentStep(2);
+        await new Promise(r => setTimeout(r, 600));
 
-      // Step 3: Check Reservation
-      const now = new Date();
-      const todayStr = now.toISOString().split('T')[0];
-      const activeBooking = bookings.find(b => 
-        b.userId === user.id &&
-        (b.date === todayStr || !b.date) &&
-        ['pending', 'confirmed'].includes(b.status)
-      );
+        // Step 3: Check Reservation
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+        const activeBooking = bookings.find(b => 
+          b.userId === user.id &&
+          (b.date === todayStr || !b.date) &&
+          ['pending', 'confirmed'].includes(b.status)
+        );
 
-      if (!activeBooking) {
-        setSteps(prev => prev.map((s, idx) => idx === 2 ? { ...s, status: 'failed' } : s));
-        setScanState('failed');
-        setErrorMessage('You must reserve a station first to scan!');
-        addNotification('You must reserve a station first to scan!', 'error');
-        
-        // Auto redirect to dashboard after 1.8 seconds
+        if (!activeBooking) {
+          setSteps(prev => prev.map((s, idx) => idx === 2 ? { ...s, status: 'failed' } : s));
+          setScanState('failed');
+          setErrorMessage('You must reserve a station first to scan!');
+          addNotification('You must reserve a station first to scan!', 'error');
+          
+          // Auto redirect to dashboard after 1.8 seconds
+          setTimeout(() => {
+            onClose();
+          }, 1800);
+          return;
+        }
+
+        setSteps(prev => prev.map((s, idx) => idx === 2 ? { ...s, status: 'success' } : s));
+        setCurrentStep(3);
+        await new Promise(r => setTimeout(r, 600));
+
+        // Step 4
+        setSteps(prev => prev.map((s, idx) => idx === 3 ? { ...s, status: 'success' } : s));
+        await new Promise(r => setTimeout(r, 500));
+
+        setScanState('success');
         setTimeout(() => {
+          onScanSuccess('universal');
           onClose();
-        }, 1800);
-        return;
-      }
+        }, 1000);
+      };
 
-      setSteps(prev => prev.map((s, idx) => idx === 2 ? { ...s, status: 'success' } : s));
-      setCurrentStep(3);
-      await new Promise(r => setTimeout(r, 600));
-
-      // Step 4
-      setSteps(prev => prev.map((s, idx) => idx === 3 ? { ...s, status: 'success' } : s));
-      await new Promise(r => setTimeout(r, 500));
-
-      setScanState('success');
-      setTimeout(() => {
-        onScanSuccess('universal');
-        onClose();
-      }, 1000);
+      runVerification();
     };
 
-    runVerification();
+    if (scannerRef.current) {
+      scannerRef.current.stop()
+        .then(() => startVerification())
+        .catch(err => {
+          console.warn("Simulate stop catch:", err);
+          startVerification();
+        });
+    } else {
+      startVerification();
+    }
   };
 
   return (
