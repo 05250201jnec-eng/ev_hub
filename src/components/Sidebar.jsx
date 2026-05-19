@@ -263,23 +263,40 @@ const Sidebar = ({ isOpen, closeSidebar }) => {
       </div>
 
       {scannerOpen && (
-        <QRScannerModal
-          onClose={() => setScannerOpen(false)}
+        <QRScannerModal 
+          onClose={() => setScannerOpen(false)} 
           onScanSuccess={(stationId) => {
-            const station = stations.find(s => s.id === stationId);
-            if (station) {
-              addNotification("QR Match! Authenticating...", "info");
-              setTimeout(async () => {
-                const success = await startSession(station.id);
-                if (success) {
-                  navigate('/');
-                  if (window.innerWidth <= 768 && closeSidebar) closeSidebar();
-                }
-              }, 1000);
-            } else {
-              addNotification("Invalid Station QR Code", "error");
+            let targetId = stationId;
+            if (stationId === 'universal') {
+               const now = new Date();
+               const todayStr = now.toISOString().split('T')[0];
+               const myBooking = bookings.find(b => 
+                 b.userId === user.id &&
+                 (b.date === todayStr || !b.date) &&
+                 ['pending', 'confirmed'].includes(b.status)
+               );
+               if (myBooking) {
+                 targetId = myBooking.stationId;
+               } else {
+                 addNotification("No active reservation found to unlock.", "error");
+                 return;
+               }
             }
-          }}
+
+            const station = stations.find(s => s.id === targetId);
+            if (station) {
+               addNotification("QR Match! Authenticating...", "info");
+               setTimeout(async () => {
+                 const success = await startSession(station.id);
+                 if (success) {
+                   navigate('/');
+                   if (window.innerWidth <= 768 && closeSidebar) closeSidebar();
+                 }
+               }, 1000);
+            } else {
+               addNotification("Invalid Station QR Code", "error");
+            }
+          }} 
         />
       )}
     </aside>

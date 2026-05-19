@@ -32,28 +32,36 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
         const html5QrCode = new window.Html5Qrcode("qr-reader-container");
         scannerRef.current = html5QrCode;
 
+        const handleSuccess = (decodedText) => {
+          setScanState('success');
+          addNotification('QR Code scanned successfully!', 'success');
+          
+          let stationId = decodedText;
+          if (decodedText.includes('universal') || decodedText === 'ev-hub-universal') {
+            stationId = 'universal';
+          } else if (decodedText.includes('/')) {
+            const parts = decodedText.split('/');
+            stationId = parts[parts.length - 1];
+          }
+
+          // Stop scanner first before removing the DOM container to avoid React crash
+          html5QrCode.stop().then(() => {
+            onScanSuccess(stationId);
+            onClose();
+          }).catch(err => {
+            console.warn("Failed to stop scanner cleanly, forcing close:", err);
+            onScanSuccess(stationId);
+            onClose();
+          });
+        };
+
         html5QrCode.start(
           { facingMode: "environment" }, // Prioritize back camera for mobile
           {
             fps: 15,
             qrbox: { width: 220, height: 220 }
           },
-          (decodedText) => {
-            setScanState('success');
-            addNotification('QR Code scanned successfully!', 'success');
-            
-            // Extract station ID from scan text (e.g. "st-001")
-            let stationId = decodedText;
-            if (decodedText.includes('/')) {
-              const parts = decodedText.split('/');
-              stationId = parts[parts.length - 1];
-            }
-
-            setTimeout(() => {
-              onScanSuccess(stationId);
-              onClose();
-            }, 1200);
-          },
+          handleSuccess,
           (errorMessage) => {
             // Quietly ignore frame errors when no QR is visible
           }
@@ -63,19 +71,7 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
           html5QrCode.start(
             { facingMode: "user" },
             { fps: 15, qrbox: { width: 220, height: 220 } },
-            (decodedText) => {
-              setScanState('success');
-              addNotification('QR Code scanned successfully!', 'success');
-              let stationId = decodedText;
-              if (decodedText.includes('/')) {
-                const parts = decodedText.split('/');
-                stationId = parts[parts.length - 1];
-              }
-              setTimeout(() => {
-                onScanSuccess(stationId);
-                onClose();
-              }, 1200);
-            },
+            handleSuccess,
             () => {}
           ).catch(fallbackErr => {
             console.error("All cameras failed to start:", fallbackErr);
@@ -88,34 +84,25 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
 
     return () => {
       clearTimeout(timer);
-      if (scannerRef.current && scannerRef.current.isScanning) {
-        scannerRef.current.stop().catch(err => console.warn(err));
+      if (scannerRef.current) {
+        try {
+          // Check if active before calling stop to avoid errors
+          if (scannerRef.current.isScanning) {
+            scannerRef.current.stop().catch(err => console.warn(err));
+          }
+        } catch (e) {
+          // ignore
+        }
       }
     };
   }, [libLoaded]);
 
   // Simulate scan fallback - dynamically picks the user's reserved station
   const handleSimulateScan = () => {
-    let targetStationId = 'st-001';
-    
-    if (user && bookings.length > 0) {
-      const now = new Date();
-      const todayStr = now.toISOString().split('T')[0];
-      // Find user's active booking today
-      const myBooking = bookings.find(b => 
-        b.userId === user.id &&
-        (b.date === todayStr || !b.date) &&
-        ['pending', 'confirmed'].includes(b.status)
-      );
-      if (myBooking) {
-        targetStationId = myBooking.stationId;
-      }
-    }
-
     setScanState('success');
     addNotification('QR Code simulated!', 'success');
     setTimeout(() => {
-      onScanSuccess(targetStationId);
+      onScanSuccess('universal'); // Simulates universal scan
       onClose();
     }, 1200);
   };
