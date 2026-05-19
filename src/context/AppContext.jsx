@@ -101,6 +101,68 @@ export const AppProvider = ({ children }) => {
     return unsub;
   }, []); // Empty dependency array prevents re-subscribing to bookings on every station change
 
+  // ── Auto-Release No-Shows (15 Min Grace Period) ──────────────────────────
+  useEffect(() => {
+    const checkNoShows = () => {
+      if (bookings.length === 0 || stations.length === 0) return;
+      const now = new Date();
+      const todayStr = now.toISOString().split('T')[0];
+
+      bookings.forEach(b => {
+        if (['pending', 'confirmed'].includes(b.status) && (b.date === todayStr || !b.date)) {
+          if (!b.time) return;
+          const timeParts = b.time.match(/(\d+):(\d+)\s(AM|PM)/);
+          if (timeParts) {
+            let hours = parseInt(timeParts[1]);
+            const mins = parseInt(timeParts[2]);
+            const ampm = timeParts[3];
+            if (ampm === 'PM' && hours < 12) hours += 12;
+            if (ampm === 'AM' && hours === 12) hours = 0;
+            
+            const bookingDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, mins);
+            const diffMs = now - bookingDate;
+            const diffMins = Math.floor(diffMs / 60000);
+
+            // If 15 minutes past the start time...
+            if (diffMins >= 15) {
+              const station = stations.find(s => s.id === b.stationId);
+              // Only cancel if station is STILL reserved (meaning they didn't plug in)
+              if (station && station.status === 'reserved') {
+                console.log(`[Auto-Release] Booking ${b.id} expired. User no-show.`);
+                
+                // 1. Mark booking as cancelled (no-show)
+                updateDoc(doc(db, 'bookings', b.id), { 
+                  status: 'cancelled',
+                  cancelReason: 'no-show (15 min limit)',
+                  updatedAt: Date.now() 
+                }).catch(() => {});
+
+                // 2. Release station
+                updateDoc(doc(db, 'stations', b.stationId), {
+                  status: 'available',
+                  reservedBy: null,
+                  reservedUntil: null,
+                  lastUpdated: Date.now()
+                }).catch(() => {});
+
+                // 3. Notify simulator
+                if (socketRef.current) {
+                  socketRef.current.emit('admin_override', { 
+                    stationId: b.stationId, 
+                    status: 'available' 
+                  });
+                }
+              }
+            }
+          }
+        }
+      });
+    };
+
+    const interval = setInterval(checkNoShows, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, [bookings, stations]);
+
   // ── Real-time sessions (current user) ────────────────────────────────────────
   useEffect(() => {
     if (!user) { setSessions([]); setActiveSession(null); return; }
