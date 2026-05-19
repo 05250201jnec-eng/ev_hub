@@ -3,8 +3,9 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import {
   LayoutDashboard, Map, Calendar, User, LogOut,
-  Zap, Shield, Wifi, WifiOff, Activity, Clock
+  Zap, Shield, Wifi, WifiOff, Activity, Clock, QrCode
 } from 'lucide-react';
+import QRScannerModal from './QRScannerModal';
 
 const navItems = [
   { to: '/',        icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
@@ -15,8 +16,9 @@ const navItems = [
 ];
 
 const Sidebar = ({ isOpen, closeSidebar }) => {
-  const { user, logout, stations, simulatorStatus, activeSession } = useAppContext();
+  const { user, logout, stations, simulatorStatus, activeSession, startSession, addNotification } = useAppContext();
   const navigate = useNavigate();
+  const [scannerOpen, setScannerOpen] = React.useState(false);
 
   const available = stations.filter(s => s.status === 'available' || s.status === 'reserved').length;
   const charging  = stations.filter(s => s.status === 'charging' || s.status === 'occupied').length;
@@ -103,6 +105,25 @@ const Sidebar = ({ isOpen, closeSidebar }) => {
         )}
       </nav>
 
+      {/* QR Scanner Button */}
+      <button 
+        onClick={() => setScannerOpen(true)} 
+        className="btn btn-primary hover-scale" 
+        style={{ 
+          margin: '0 0.75rem 1rem', 
+          width: 'calc(100% - 1.5rem)', 
+          padding: '0.85rem', 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '0.75rem', 
+          justifyContent: 'center',
+          boxShadow: '0 0 20px rgba(57, 255, 20, 0.4)'
+        }}
+      >
+        <QrCode size={20} />
+        <span style={{ fontWeight: 800, letterSpacing: '0.02em' }}>Scan Station QR</span>
+      </button>
+
       {/* Live Stats Mini */}
       <div style={{ margin: '0 0.75rem 0.75rem', padding: '1rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)' }}>
         <p style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.75rem', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Network Status</p>
@@ -149,6 +170,27 @@ const Sidebar = ({ isOpen, closeSidebar }) => {
           <LogOut size={16} /> Sign Out
         </button>
       </div>
+
+      {scannerOpen && (
+        <QRScannerModal 
+          onClose={() => setScannerOpen(false)} 
+          onScanSuccess={(stationId) => {
+            const station = stations.find(s => s.id === stationId);
+            if (station) {
+               addNotification("QR Match! Authenticating...", "info");
+               setTimeout(async () => {
+                 const success = await startSession(station.id);
+                 if (success) {
+                   navigate('/');
+                   if (window.innerWidth <= 768 && closeSidebar) closeSidebar();
+                 }
+               }, 1000);
+            } else {
+               addNotification("Invalid Station QR Code", "error");
+            }
+          }} 
+        />
+      )}
     </aside>
   );
 };

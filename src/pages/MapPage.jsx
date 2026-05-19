@@ -9,7 +9,6 @@ import {
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import BookingModal from '../components/BookingModal';
-import QRScannerModal from '../components/QRScannerModal';
 import { bhutanBorder } from '../data/bhutanBorder';
 
 // Fix for default marker icons
@@ -34,7 +33,6 @@ const MapPage = () => {
   const { stations, bookings, startSession, activeSession, addNotification, searchQuery } = useAppContext();
   const [selected, setSelected] = useState(null);
   const [bookingOpen, setBookingOpen] = useState(false);
-  const [scannerOpen, setScannerOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all');
   const [mapType, setMapType] = useState('roadmap');
   const [mapReady, setMapReady] = useState(false);
@@ -629,9 +627,6 @@ const MapPage = () => {
             <button onClick={() => locateAndJump()} className="glass hover-scale" style={{ width: 44, height: 44, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', cursor: 'pointer' }} title="Find Nearest Station">
               <Zap size={20} fill="#10b981" />
             </button>
-            <button onClick={() => setScannerOpen(true)} className="glass hover-scale" style={{ width: 44, height: 44, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-primary)', border: '1px solid var(--accent-primary)', background: 'rgba(57,255,20,0.1)', cursor: 'pointer' }} title="Scan QR Code">
-              <QrCode size={20} />
-            </button>
           </div>
 
           {routeInfo && (
@@ -762,21 +757,6 @@ const MapPage = () => {
         </div>
       )}
       {bookingOpen && <BookingModal station={selected} onClose={() => setBookingOpen(false)} />}
-      {scannerOpen && (
-        <QRScannerModal 
-          onClose={() => setScannerOpen(false)} 
-          onScanSuccess={(stationId) => {
-            const station = stations.find(s => s.id === stationId);
-            if (station) {
-               setSelected(station);
-               addNotification("QR Match! Authenticating...", "info");
-               setTimeout(() => handleStartSession(station), 1000);
-            } else {
-               addNotification("Invalid Station QR Code", "error");
-            }
-          }} 
-        />
-      )}
     </div>
   );
 };
