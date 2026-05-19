@@ -475,30 +475,27 @@ export const AppProvider = ({ children }) => {
     try {
       const station = stations.find(s => s.id === stationId);
       
-      // AUTHENTICATION CHECK: If station is reserved, verify it belongs to this user
-      if (station && station.status === 'reserved') {
-        const now = new Date();
-        const todayStr = now.toISOString().split('T')[0];
-        // Find the active booking for this station today
-        const activeBooking = bookings.find(b => 
-          b.stationId === stationId && 
-          (b.date === todayStr || !b.date) &&
-          ['pending', 'confirmed'].includes(b.status)
-        );
+      const now = new Date();
+      const todayStr = now.toISOString().split('T')[0];
+      
+      // AUTHENTICATION CHECK: Verify user has an active booking for this station today
+      const activeBooking = bookings.find(b => 
+        b.stationId === stationId && 
+        b.userId === user.id &&
+        (b.date === todayStr || !b.date) &&
+        ['pending', 'confirmed'].includes(b.status)
+      );
 
-        if (activeBooking && activeBooking.userId !== user.id) {
-          addNotification('Authentication Failed: This station is reserved by another user.', 'error');
-          return null;
-        }
-
-        // If it IS this user, update the booking to 'active'
-        if (activeBooking && activeBooking.userId === user.id) {
-          await updateDoc(doc(db, 'bookings', activeBooking.id), {
-            status: 'active',
-            updatedAt: Date.now()
-          }).catch(() => {});
-        }
+      if (!activeBooking) {
+        addNotification('Access Denied: You must reserve this station first before unlocking.', 'error');
+        return null;
       }
+
+      // Update the booking to 'active'
+      await updateDoc(doc(db, 'bookings', activeBooking.id), {
+        status: 'active',
+        updatedAt: Date.now()
+      }).catch(() => {});
 
       const session = {
         userId: user.id,
