@@ -487,7 +487,7 @@ export const AppProvider = ({ children }) => {
       );
 
       if (!activeBooking) {
-        addNotification('Access Denied: You must reserve this station first before unlocking.', 'error');
+        addNotification('You must reserve this station first to scan!', 'error');
         return null;
       }
 

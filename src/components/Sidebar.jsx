@@ -278,7 +278,7 @@ const Sidebar = ({ isOpen, closeSidebar }) => {
                if (myBooking) {
                  targetId = myBooking.stationId;
                } else {
-                 addNotification("No active reservation found to unlock.", "error");
+                 addNotification("You must reserve a station first to scan!", "error");
                  return;
                }
             }
