@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search, Bell, User, Zap, Wifi, WifiOff, Menu } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 
 const Navbar = ({ toggleSidebar }) => {
-  const { user, simulatorStatus, searchQuery, setSearchQuery, bookings } = useAppContext();
+  const { user, simulatorStatus, searchQuery, setSearchQuery, bookings, addNotification } = useAppContext();
   const [showNotifications, setShowNotifications] = useState(false);
   const [reminders, setReminders] = useState([]);
+  const notifiedBookings = useRef(new Set());
 
   useEffect(() => {
     const checkReminders = () => {
@@ -38,6 +39,11 @@ const Navbar = ({ toggleSidebar }) => {
                 message: `Upcoming reservation at ${b.stationName} in ${diffMins} minutes!`,
                 time: b.time
               });
+
+              if (!notifiedBookings.current.has(b.id)) {
+                addNotification(`Upcoming reservation at ${b.stationName} in ${diffMins} minutes! ⏰`, 'info');
+                notifiedBookings.current.add(b.id);
+              }
             }
           }
         }
@@ -48,7 +54,7 @@ const Navbar = ({ toggleSidebar }) => {
     checkReminders();
     const interval = setInterval(checkReminders, 30000); // Check every 30s
     return () => clearInterval(interval);
-  }, [bookings, user]);
+  }, [bookings, user, addNotification]);
 
   return (
     <header className="glass" style={{
