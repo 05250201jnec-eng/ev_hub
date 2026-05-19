@@ -226,7 +226,7 @@ const Dashboard = () => {
       </div>
 
       {/* ── Main Content Grid ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '2rem', alignItems: 'start' }}>
+      <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '2rem', alignItems: 'start' }}>
 
         {/* Live Station Grid */}
         <div className="glass" style={{ padding: '2rem', borderRadius: 'var(--radius-lg)' }}>

@@ -67,7 +67,7 @@ const Bookings = () => {
       {filtered.length === 0 ? (
         <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '3rem' }}>No {filter} reservations.</p>
       ) : (
-        <div style={{ display: 'grid', gap: '1.25rem', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))' }}>
+        <div className="bookings-grid" style={{ display: 'grid', gap: '1.25rem', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))' }}>
           {filtered.map(booking => {
             const station = stations.find(s => s.id === booking.stationId);
             const s = STATUS_MAP[booking.status] || STATUS_MAP.pending;
