@@ -36,7 +36,7 @@ const BookingModal = ({ station, onClose }) => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      zIndex: 100
+      zIndex: 9999
     }}>
       <div className="glass animate-fade-in" style={{
         width: '100%',

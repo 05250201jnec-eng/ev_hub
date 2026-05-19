@@ -523,7 +523,7 @@ const MapPage = () => {
             right: 0;
             z-index: 2000;
             border-radius: 24px 24px 0 0 !important;
-            padding: 1.5rem !important;
+            padding: 1.5rem 1.5rem 3rem 1.5rem !important;
             box-shadow: 0 -10px 40px rgba(0,0,0,0.6) !important;
             background: var(--bg-secondary) !important;
             border: 1px solid var(--border-color);
