@@ -272,10 +272,13 @@ const Sidebar = ({ isOpen, closeSidebar }) => {
             let targetId = stationId;
             if (stationId === 'universal') {
                const now = new Date();
-               const todayStr = now.toISOString().split('T')[0];
+               const utcToday = now.toISOString().split('T')[0];
+               const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+               const todayStrings = [utcToday, localToday];
+
                const myBooking = bookings.find(b => 
                  b.userId === user.id &&
-                 (b.date === todayStr || !b.date) &&
+                 (todayStrings.includes(b.date) || !b.date) &&
                  ['pending', 'confirmed'].includes(b.status)
                );
                if (myBooking) {

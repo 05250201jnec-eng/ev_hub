@@ -75,7 +75,9 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
 
           // Step 3: Check Reservation
           const now = new Date();
-          const todayStr = now.toISOString().split('T')[0];
+          const utcToday = now.toISOString().split('T')[0];
+          const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+          const todayStrings = [utcToday, localToday];
           
           let stationId = decodedText;
           if (decodedText.includes('universal') || decodedText === 'ev-hub-universal') {
@@ -91,7 +93,7 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
           if (stationId === 'universal') {
             activeBooking = bookings.find(b => 
               b.userId === user.id &&
-              (b.date === todayStr || !b.date) &&
+              (todayStrings.includes(b.date) || !b.date) &&
               ['pending', 'confirmed'].includes(b.status)
             );
             if (activeBooking) {
@@ -101,7 +103,7 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
             activeBooking = bookings.find(b => 
               b.stationId === stationId && 
               b.userId === user.id &&
-              (b.date === todayStr || !b.date) &&
+              (todayStrings.includes(b.date) || !b.date) &&
               ['pending', 'confirmed'].includes(b.status)
             );
           }
@@ -238,10 +240,13 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
 
         // Step 3: Check Reservation
         const now = new Date();
-        const todayStr = now.toISOString().split('T')[0];
+        const utcToday = now.toISOString().split('T')[0];
+        const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const todayStrings = [utcToday, localToday];
+
         const activeBooking = bookings.find(b => 
           b.userId === user.id &&
-          (b.date === todayStr || !b.date) &&
+          (todayStrings.includes(b.date) || !b.date) &&
           ['pending', 'confirmed'].includes(b.status)
         );
 

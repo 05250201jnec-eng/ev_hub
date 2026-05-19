@@ -15,7 +15,8 @@ const Navbar = ({ toggleSidebar }) => {
 
       bookings.forEach(b => {
         if (b.userId === user.id && ['pending', 'confirmed'].includes(b.status)) {
-          const dateStr = b.date || now.toISOString().split('T')[0];
+          const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+          const dateStr = b.date || localToday;
           const dateParts = dateStr.split('-');
           if (!b.time) return;
           const timeParts = b.time.match(/(\d+):(\d+)\s(AM|PM)/);

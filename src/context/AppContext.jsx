@@ -72,14 +72,16 @@ export const AppProvider = ({ children }) => {
       setStations(currentStations => {
         if (currentStations.length > 0) {
           const now = new Date();
-          const todayStr = now.toISOString().split('T')[0];
+          const utcToday = now.toISOString().split('T')[0];
+          const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+          const todayStrings = [utcToday, localToday];
           const currentHour = now.getHours();
 
           currentStations.forEach(station => {
             if (station.status === 'reserved') {
               const hasLiveBooking = allBookings.some(b => 
                 b.stationId === station.id && 
-                (b.date === todayStr || !b.date) &&
+                (todayStrings.includes(b.date) || !b.date) &&
                 convert12to24(b.time) === currentHour &&
                 ['pending', 'confirmed', 'active'].includes(b.status)
               );
@@ -106,10 +108,12 @@ export const AppProvider = ({ children }) => {
     const checkNoShows = () => {
       if (bookings.length === 0 || stations.length === 0) return;
       const now = new Date();
-      const todayStr = now.toISOString().split('T')[0];
+      const utcToday = now.toISOString().split('T')[0];
+      const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const todayStrings = [utcToday, localToday];
 
       bookings.forEach(b => {
-        if (['pending', 'confirmed'].includes(b.status) && (b.date === todayStr || !b.date)) {
+        if (['pending', 'confirmed'].includes(b.status) && (todayStrings.includes(b.date) || !b.date)) {
           if (!b.time) return;
           const timeParts = b.time.match(/(\d+):(\d+)\s(AM|PM)/);
           if (timeParts) {
@@ -396,7 +400,9 @@ export const AppProvider = ({ children }) => {
       
       // RULE: Booking only affects status if it's for TODAY and the CURRENT HOUR
       const now = new Date();
-      const todayStr = now.toISOString().split('T')[0];
+      const utcToday = now.toISOString().split('T')[0];
+      const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const todayStrings = [utcToday, localToday];
       const currentHour = now.getHours();
       
       const convert12to24 = (timeStr) => {
@@ -408,7 +414,7 @@ export const AppProvider = ({ children }) => {
         return hours;
       };
 
-      if (isAvailable && date === todayStr && convert12to24(time) === currentHour) {
+      if (isAvailable && todayStrings.includes(date) && convert12to24(time) === currentHour) {
         await updateDoc(doc(db, 'stations', stationId), {
           status: 'reserved',
           reservedBy: user.name,
@@ -476,13 +482,15 @@ export const AppProvider = ({ children }) => {
       const station = stations.find(s => s.id === stationId);
       
       const now = new Date();
-      const todayStr = now.toISOString().split('T')[0];
+      const utcToday = now.toISOString().split('T')[0];
+      const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const todayStrings = [utcToday, localToday];
       
       // AUTHENTICATION CHECK: Verify user has an active booking for this station today
       const activeBooking = bookings.find(b => 
         b.stationId === stationId && 
         b.userId === user.id &&
-        (b.date === todayStr || !b.date) &&
+        (todayStrings.includes(b.date) || !b.date) &&
         ['pending', 'confirmed'].includes(b.status)
       );
 
