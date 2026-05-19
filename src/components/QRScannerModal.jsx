@@ -133,7 +133,6 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
           setResolvedStationId(stationId);
           setScanState('plug_in');
         };
-        };
 
         html5QrCode.start(
           { facingMode: "environment" }, // Prioritize back camera for mobile
@@ -272,7 +271,6 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
 
         setResolvedStationId('universal');
         setScanState('plug_in');
-      };
       };
 
       runVerification();
