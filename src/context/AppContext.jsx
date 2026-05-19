@@ -473,11 +473,38 @@ export const AppProvider = ({ children }) => {
   const startSession = async (stationId) => {
     if (!user) { addNotification('Please login first', 'error'); return null; }
     try {
+      const station = stations.find(s => s.id === stationId);
+      
+      // AUTHENTICATION CHECK: If station is reserved, verify it belongs to this user
+      if (station && station.status === 'reserved') {
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+        // Find the active booking for this station today
+        const activeBooking = bookings.find(b => 
+          b.stationId === stationId && 
+          (b.date === todayStr || !b.date) &&
+          ['pending', 'confirmed'].includes(b.status)
+        );
+
+        if (activeBooking && activeBooking.userId !== user.id) {
+          addNotification('Authentication Failed: This station is reserved by another user.', 'error');
+          return null;
+        }
+
+        // If it IS this user, update the booking to 'active'
+        if (activeBooking && activeBooking.userId === user.id) {
+          await updateDoc(doc(db, 'bookings', activeBooking.id), {
+            status: 'active',
+            updatedAt: Date.now()
+          }).catch(() => {});
+        }
+      }
+
       const session = {
         userId: user.id,
         userName: user.name,
         stationId,
-        stationName: stations.find(s => s.id === stationId)?.name || 'Unknown',
+        stationName: station?.name || 'Unknown',
         status: 'active',
         energyConsumed: 0,
         startTime: new Date().toISOString(),
