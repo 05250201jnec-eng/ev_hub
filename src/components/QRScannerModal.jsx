@@ -16,6 +16,7 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
   const { addNotification, bookings, user, stations } = useAppContext();
   const [libLoaded, setLibLoaded] = useState(false);
   const scannerRef = useRef(null);
+  const isCameraActive = useRef(false);
 
   // Load html5-qrcode dynamically from CDN to avoid npm install blocks
   useEffect(() => {
@@ -42,7 +43,8 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
         scannerRef.current = html5QrCode;
 
         const handleSuccess = (decodedText) => {
-          // Stop camera immediately to release camera light/lock
+          // Immediately mark inactive to prevent unmount double-stop
+          isCameraActive.current = false;
           html5QrCode.stop().catch(err => console.warn(err));
 
           setScanState('verifying');
@@ -136,20 +138,31 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
             fps: 15,
             qrbox: { width: 220, height: 220 }
           },
-          handleSuccess,
+          (decodedText) => {
+            isCameraActive.current = true;
+            handleSuccess(decodedText);
+          },
           (errorMessage) => {
             // Quietly ignore frame errors when no QR is visible
           }
-        ).catch((err) => {
+        ).then(() => {
+          isCameraActive.current = true;
+        }).catch((err) => {
           console.warn("Back camera failed, trying front camera:", err);
           // Fallback to user (front) camera if environment camera fails (e.g. on laptops)
           html5QrCode.start(
             { facingMode: "user" },
             { fps: 15, qrbox: { width: 220, height: 220 } },
-            handleSuccess,
+            (decodedText) => {
+              isCameraActive.current = true;
+              handleSuccess(decodedText);
+            },
             () => {}
-          ).catch(fallbackErr => {
+          ).then(() => {
+            isCameraActive.current = true;
+          }).catch(fallbackErr => {
             console.error("All cameras failed to start:", fallbackErr);
+            isCameraActive.current = false;
           });
         });
       } catch (err) {
@@ -159,14 +172,15 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
 
     return () => {
       clearTimeout(timer);
-      if (scannerRef.current) {
+      if (scannerRef.current && isCameraActive.current) {
         try {
-          // Unconditional stop with catch handlers to prevent background camera threads from crashing React
+          // Only stop if camera is confirmed active
+          isCameraActive.current = false;
           scannerRef.current.stop()
             .then(() => console.log("Camera stopped cleanly on unmount"))
-            .catch(err => console.warn("Catching expected duplicate stop rejection:", err));
+            .catch(err => console.warn("Camera stop error on unmount:", err));
         } catch (e) {
-          console.warn("Catching expected duplicate stop sync exception:", e);
+          console.warn("Camera stop sync exception on unmount:", e);
         }
       }
     };
@@ -183,6 +197,7 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
     ]);
     
     // Simulate reading 'universal' QR code
+    isCameraActive.current = false;
     if (scannerRef.current) {
       scannerRef.current.stop().catch(err => console.warn(err));
     }
