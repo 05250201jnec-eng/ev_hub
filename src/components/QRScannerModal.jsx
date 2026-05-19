@@ -18,20 +18,18 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
   const scannerRef = useRef(null);
   const isCameraActive = useRef(false);
 
-  // Load html5-qrcode dynamically from CDN to avoid npm install blocks
+  // Load html5-qrcode dynamically from CDN once
   useEffect(() => {
+    if (window.Html5Qrcode) {
+      setLibLoaded(true);
+      return;
+    }
+
     const script = document.createElement('script');
     script.src = "https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js";
     script.async = true;
     script.onload = () => setLibLoaded(true);
     document.body.appendChild(script);
-
-    return () => {
-      document.body.removeChild(script);
-      if (scannerRef.current) {
-        scannerRef.current.stop().catch(err => console.warn(err));
-      }
-    };
   }, []);
 
   useEffect(() => {
@@ -116,7 +114,7 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
             
             // Automatically redirect to dashboard after 1.8 seconds
             setTimeout(() => {
-              onClose();
+              handleClose();
             }, 1800);
             return;
           }
@@ -132,7 +130,7 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
           setScanState('success');
           setTimeout(() => {
             onScanSuccess(stationId);
-            onClose();
+            handleClose();
           }, 1000);
         };
 
@@ -190,6 +188,21 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
     };
   }, [libLoaded]);
 
+  // Safely stop camera before calling onClose
+  const handleClose = () => {
+    if (scannerRef.current && isCameraActive.current) {
+      isCameraActive.current = false;
+      scannerRef.current.stop()
+        .then(() => onClose())
+        .catch(err => {
+          console.warn("Error stopping scanner during manual close:", err);
+          onClose();
+        });
+    } else {
+      onClose();
+    }
+  };
+
   // Simulate scan fallback - dynamically picks the user's reserved station
   const handleSimulateScan = () => {
     // Reset steps
@@ -240,7 +253,7 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
           
           // Auto redirect to dashboard after 1.8 seconds
           setTimeout(() => {
-            onClose();
+            handleClose();
           }, 1800);
           return;
         }
@@ -256,7 +269,7 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
         setScanState('success');
         setTimeout(() => {
           onScanSuccess('universal');
-          onClose();
+          handleClose();
         }, 1000);
       };
 
@@ -290,7 +303,7 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
     }}>
       <div style={{ position: 'absolute', top: '1.5rem', right: '1.5rem' }}>
         <button 
-          onClick={onClose}
+          onClick={handleClose}
           style={{ 
             background: 'rgba(255,255,255,0.1)', 
             border: 'none', 
@@ -318,21 +331,22 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
         </p>
       </div>
 
-      {scanState === 'scanning' ? (
-        <div style={{
-          position: 'relative',
-          width: '100%',
-          maxWidth: '300px',
-          aspectRatio: '1',
-          borderRadius: '24px',
-          overflow: 'hidden',
-          boxShadow: '0 0 30px rgba(0,0,0,0.5)',
-          border: '3px solid rgba(255,255,255,0.1)',
-          background: '#0a101d'
-        }}>
-          <div id="qr-reader-container" style={{ width: '100%', height: '100%' }} />
-        </div>
-      ) : (
+      <div style={{
+        position: 'relative',
+        width: '100%',
+        maxWidth: '300px',
+        aspectRatio: '1',
+        borderRadius: '24px',
+        overflow: 'hidden',
+        boxShadow: '0 0 30px rgba(0,0,0,0.5)',
+        border: '3px solid rgba(255,255,255,0.1)',
+        background: '#0a101d',
+        display: scanState === 'scanning' ? 'block' : 'none' // Keep in DOM to avoid race unmount crash
+      }}>
+        <div id="qr-reader-container" style={{ width: '100%', height: '100%' }} />
+      </div>
+
+      {scanState !== 'scanning' && (
         <div className="glass animate-fade-in" style={{
           width: '100%',
           maxWidth: '350px',
