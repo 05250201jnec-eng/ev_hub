@@ -92,7 +92,7 @@ const App = () => {
           borderTopColor: 'var(--accent-primary)', animation: 'spin 1s linear infinite' 
         }} />
         <div style={{ textAlign: 'center' }}>
-           <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }} className="text-gradient">EV Hub</h2>
+           <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }} className="text-gradient animate-text-glow">EV Hub</h2>
            <p style={{ color: 'var(--text-secondary)', fontSize: '0.8125rem', marginTop: '0.25rem' }}>Initializing secure connection...</p>
         </div>
         <button 

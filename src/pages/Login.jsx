@@ -113,7 +113,7 @@ const Login = () => {
           }} />
           
           <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
-            <div style={{
+            <div className="animate-logo" style={{
               background: 'var(--accent-gradient)',
               padding: '1.25rem',
               borderRadius: 'var(--radius-md)',
@@ -126,7 +126,7 @@ const Login = () => {
               <Zap size={48} color="white" fill="white" />
             </div>
 
-            <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '1rem' }}>
+            <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '1rem' }} className="animate-text-glow">
               <span className="text-gradient">EV Hub</span>
             </h1>
 

@@ -232,6 +232,30 @@ input:focus, select:focus, textarea:focus {
   50%       { transform: scale(1.8); opacity: 0.15; }
 }
 
+@keyframes logo-float-glow {
+  0%, 100% { 
+    transform: translateY(0px); 
+    box-shadow: 0 8px 32px rgba(59, 130, 246, 0.3);
+  }
+  50% { 
+    transform: translateY(-10px); 
+    box-shadow: 0 15px 45px rgba(59, 130, 246, 0.8), 0 0 20px rgba(139, 92, 246, 0.6);
+  }
+}
+
+@keyframes text-glow {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(59,130,246,0.3)); }
+  50% { filter: drop-shadow(0 0 20px rgba(59,130,246,0.8)); }
+}
+
+.animate-logo {
+  animation: logo-float-glow 3s ease-in-out infinite;
+}
+
+.animate-text-glow {
+  animation: text-glow 3s ease-in-out infinite;
+}
+
 /* ── Scrollbar ─────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg-color); }
