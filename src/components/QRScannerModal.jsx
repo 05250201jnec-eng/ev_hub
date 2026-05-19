@@ -3,8 +3,17 @@ import { X, QrCode, Camera, CheckCircle2 } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 
 const QRScannerModal = ({ onClose, onScanSuccess }) => {
-  const [scanState, setScanState] = useState('scanning'); // scanning | success
-  const { addNotification, bookings, user } = useAppContext();
+  const [scanState, setScanState] = useState('scanning'); // scanning | verifying | success | failed
+  const [errorMessage, setErrorMessage] = useState('');
+  const [currentStep, setCurrentStep] = useState(0);
+  const [steps, setSteps] = useState([
+    { label: 'Reading Station QR', status: 'pending' },
+    { label: 'Verifying User Account', status: 'pending' },
+    { label: 'Checking Active Reservations', status: 'pending' },
+    { label: 'Unlocking Charger Solenoid', status: 'pending' }
+  ]);
+  
+  const { addNotification, bookings, user, stations } = useAppContext();
   const [libLoaded, setLibLoaded] = useState(false);
   const scannerRef = useRef(null);
 
@@ -33,8 +42,10 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
         scannerRef.current = html5QrCode;
 
         const handleSuccess = (decodedText) => {
-          setScanState('success');
-          addNotification('QR Code scanned successfully!', 'success');
+          // Stop camera immediately to release camera light/lock
+          html5QrCode.stop().catch(err => console.warn(err));
+
+          setScanState('verifying');
           
           let stationId = decodedText;
           if (decodedText.includes('universal') || decodedText === 'ev-hub-universal') {
@@ -44,15 +55,74 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
             stationId = parts[parts.length - 1];
           }
 
-          // Stop scanner first before removing the DOM container to avoid React crash
-          html5QrCode.stop().then(() => {
-            onScanSuccess(stationId);
-            onClose();
-          }).catch(err => {
-            console.warn("Failed to stop scanner cleanly, forcing close:", err);
-            onScanSuccess(stationId);
-            onClose();
-          });
+          // Run step-by-step verification animation with real checks
+          const runVerification = async () => {
+            // Step 1: Read QR
+            setSteps(prev => prev.map((s, idx) => idx === 0 ? { ...s, status: 'success' } : s));
+            setCurrentStep(1);
+            await new Promise(r => setTimeout(r, 600));
+
+            // Step 2: Verify User
+            if (!user) {
+              setSteps(prev => prev.map((s, idx) => idx === 1 ? { ...s, status: 'failed' } : s));
+              setScanState('failed');
+              setErrorMessage('No authenticated user found. Please login.');
+              return;
+            }
+            setSteps(prev => prev.map((s, idx) => idx === 1 ? { ...s, status: 'success' } : s));
+            setCurrentStep(2);
+            await new Promise(r => setTimeout(r, 600));
+
+            // Step 3: Check Reservation
+            const now = new Date();
+            const todayStr = now.toISOString().split('T')[0];
+            
+            // Resolve universal station ID if needed
+            let finalStationId = stationId;
+            let activeBooking = null;
+
+            if (stationId === 'universal') {
+              activeBooking = bookings.find(b => 
+                b.userId === user.id &&
+                (b.date === todayStr || !b.date) &&
+                ['pending', 'confirmed'].includes(b.status)
+              );
+              if (activeBooking) {
+                finalStationId = activeBooking.stationId;
+              }
+            } else {
+              activeBooking = bookings.find(b => 
+                b.stationId === stationId && 
+                b.userId === user.id &&
+                (b.date === todayStr || !b.date) &&
+                ['pending', 'confirmed'].includes(b.status)
+              );
+            }
+
+            if (!activeBooking) {
+              setSteps(prev => prev.map((s, idx) => idx === 2 ? { ...s, status: 'failed' } : s));
+              setScanState('failed');
+              setErrorMessage('You must reserve a slot for this station first to scan!');
+              addNotification('You must reserve a station first to scan!', 'error');
+              return;
+            }
+
+            setSteps(prev => prev.map((s, idx) => idx === 2 ? { ...s, status: 'success' } : s));
+            setCurrentStep(3);
+            await new Promise(r => setTimeout(r, 600));
+
+            // Step 4: Unlock Solenoid
+            setSteps(prev => prev.map((s, idx) => idx === 3 ? { ...s, status: 'success' } : s));
+            await new Promise(r => setTimeout(r, 500));
+
+            setScanState('success');
+            setTimeout(() => {
+              onScanSuccess(stationId);
+              onClose();
+            }, 1000);
+          };
+
+          runVerification();
         };
 
         html5QrCode.start(
@@ -99,20 +169,79 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
 
   // Simulate scan fallback - dynamically picks the user's reserved station
   const handleSimulateScan = () => {
-    setScanState('success');
-    addNotification('QR Code simulated!', 'success');
-    setTimeout(() => {
-      onScanSuccess('universal'); // Simulates universal scan
-      onClose();
-    }, 1200);
+    // Reset steps
+    setSteps([
+      { label: 'Reading Station QR', status: 'pending' },
+      { label: 'Verifying User Account', status: 'pending' },
+      { label: 'Checking Active Reservations', status: 'pending' },
+      { label: 'Unlocking Charger Solenoid', status: 'pending' }
+    ]);
+    
+    // Simulate reading 'universal' QR code
+    if (scannerRef.current) {
+      scannerRef.current.stop().catch(err => console.warn(err));
+    }
+
+    setScanState('verifying');
+
+    const runVerification = async () => {
+      // Step 1
+      setSteps(prev => prev.map((s, idx) => idx === 0 ? { ...s, status: 'success' } : s));
+      setCurrentStep(1);
+      await new Promise(r => setTimeout(r, 600));
+
+      // Step 2
+      if (!user) {
+        setSteps(prev => prev.map((s, idx) => idx === 1 ? { ...s, status: 'failed' } : s));
+        setScanState('failed');
+        setErrorMessage('No authenticated user found.');
+        return;
+      }
+      setSteps(prev => prev.map((s, idx) => idx === 1 ? { ...s, status: 'success' } : s));
+      setCurrentStep(2);
+      await new Promise(r => setTimeout(r, 600));
+
+      // Step 3: Check Reservation
+      const now = new Date();
+      const todayStr = now.toISOString().split('T')[0];
+      const activeBooking = bookings.find(b => 
+        b.userId === user.id &&
+        (b.date === todayStr || !b.date) &&
+        ['pending', 'confirmed'].includes(b.status)
+      );
+
+      if (!activeBooking) {
+        setSteps(prev => prev.map((s, idx) => idx === 2 ? { ...s, status: 'failed' } : s));
+        setScanState('failed');
+        setErrorMessage('You must reserve a station first to scan!');
+        addNotification('You must reserve a station first to scan!', 'error');
+        return;
+      }
+
+      setSteps(prev => prev.map((s, idx) => idx === 2 ? { ...s, status: 'success' } : s));
+      setCurrentStep(3);
+      await new Promise(r => setTimeout(r, 600));
+
+      // Step 4
+      setSteps(prev => prev.map((s, idx) => idx === 3 ? { ...s, status: 'success' } : s));
+      await new Promise(r => setTimeout(r, 500));
+
+      setScanState('success');
+      setTimeout(() => {
+        onScanSuccess('universal');
+        onClose();
+      }, 1000);
+    };
+
+    runVerification();
   };
 
   return (
     <div style={{
       position: 'fixed',
       inset: 0,
-      background: 'rgba(0,0,0,0.85)',
-      backdropFilter: 'blur(10px)',
+      background: 'rgba(0,0,0,0.9)',
+      backdropFilter: 'blur(12px)',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -141,53 +270,114 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
       </div>
 
       <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'white', marginBottom: '0.5rem' }}>Scan Station QR</h2>
-        <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem' }}>Align the QR code within the frame to unlock</p>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'white', marginBottom: '0.5rem' }}>EV Hub Scanner</h2>
+        <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem' }}>
+          {scanState === 'scanning' && 'Align the QR code within the frame to unlock'}
+          {scanState === 'verifying' && 'Running secure handshake protocol...'}
+          {scanState === 'success' && 'Verification Complete! Charger Unlocked.'}
+          {scanState === 'failed' && 'Security Verification Failed'}
+        </p>
       </div>
 
-      <div style={{
-        position: 'relative',
-        width: '100%',
-        maxWidth: '300px',
-        aspectRatio: '1',
-        borderRadius: '24px',
-        overflow: 'hidden',
-        boxShadow: scanState === 'success' ? '0 0 40px rgba(57, 255, 20, 0.5)' : '0 0 30px rgba(0,0,0,0.5)',
-        border: `3px solid ${scanState === 'success' ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)'}`,
-        transition: 'all 0.3s ease',
-        background: '#0a101d'
-      }}>
-        
-        <div id="qr-reader-container" style={{ width: '100%', height: '100%' }} />
+      {scanState === 'scanning' ? (
+        <div style={{
+          position: 'relative',
+          width: '100%',
+          maxWidth: '300px',
+          aspectRatio: '1',
+          borderRadius: '24px',
+          overflow: 'hidden',
+          boxShadow: '0 0 30px rgba(0,0,0,0.5)',
+          border: '3px solid rgba(255,255,255,0.1)',
+          background: '#0a101d'
+        }}>
+          <div id="qr-reader-container" style={{ width: '100%', height: '100%' }} />
+        </div>
+      ) : (
+        <div className="glass animate-fade-in" style={{
+          width: '100%',
+          maxWidth: '350px',
+          padding: '2rem',
+          borderRadius: '24px',
+          border: `1px solid ${scanState === 'success' ? 'var(--accent-primary)' : scanState === 'failed' ? '#ef4444' : 'rgba(255,255,255,0.1)'}`,
+          boxShadow: scanState === 'success' ? '0 0 30px rgba(57,255,20,0.15)' : scanState === 'failed' ? '0 0 30px rgba(239,68,68,0.15)' : 'none',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1rem'
+        }}>
+          {steps.map((step, idx) => (
+            <div key={idx} style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              opacity: idx > currentStep ? 0.4 : 1,
+              transition: 'opacity 0.3s ease'
+            }}>
+              <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'white' }}>{step.label}</span>
+              <span style={{ 
+                fontSize: '0.85rem', 
+                fontWeight: 800,
+                color: step.status === 'success' ? 'var(--accent-primary)' : step.status === 'failed' ? '#ef4444' : '#64748b'
+              }}>
+                {step.status === 'success' && '✓'}
+                {step.status === 'failed' && '✗'}
+                {step.status === 'pending' && idx === currentStep && '...'}
+                {step.status === 'pending' && idx > currentStep && 'WAIT'}
+              </span>
+            </div>
+          ))}
 
-        {scanState === 'success' && (
-          <div className="animate-fade-in" style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'rgba(57, 255, 20, 0.2)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backdropFilter: 'blur(4px)',
-            zIndex: 10
-          }}>
-            <CheckCircle2 size={64} color="var(--accent-primary)" />
-          </div>
-        )}
-      </div>
+          {scanState === 'failed' && (
+            <div className="animate-shake" style={{
+              marginTop: '1rem',
+              padding: '0.75rem',
+              borderRadius: '8px',
+              background: 'rgba(239,68,68,0.1)',
+              border: '1px solid rgba(239,68,68,0.2)',
+              color: '#ef4444',
+              fontSize: '0.8rem',
+              textAlign: 'center',
+              fontWeight: 600
+            }}>
+              {errorMessage}
+            </div>
+          )}
+        </div>
+      )}
 
-      <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'center' }}>
+      {scanState === 'scanning' && (
+        <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'center' }}>
+          <button 
+            onClick={handleSimulateScan}
+            className="btn btn-primary hover-scale"
+            style={{ padding: '0.75rem 1.5rem', gap: '0.5rem', fontSize: '0.9rem' }}
+          >
+            <QrCode size={18} /> Simulate Scan
+          </button>
+          <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
+            Tip: Scan any QR containing a valid Station ID or use Simulation
+          </span>
+        </div>
+      )}
+
+      {scanState === 'failed' && (
         <button 
-          onClick={handleSimulateScan}
-          className="btn btn-primary hover-scale"
-          style={{ padding: '0.75rem 1.5rem', gap: '0.5rem', fontSize: '0.9rem' }}
+          onClick={() => {
+            setScanState('scanning');
+            setSteps([
+              { label: 'Reading Station QR', status: 'pending' },
+              { label: 'Verifying User Account', status: 'pending' },
+              { label: 'Checking Active Reservations', status: 'pending' },
+              { label: 'Unlocking Charger Solenoid', status: 'pending' }
+            ]);
+            setCurrentStep(0);
+          }}
+          className="btn btn-outline"
+          style={{ marginTop: '2rem', padding: '0.75rem 1.5rem' }}
         >
-          <QrCode size={18} /> Simulate Scan
+          Try Again
         </button>
-        <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
-          Tip: You can scan any QR code containing a valid Station ID (e.g. <strong>st-001</strong>, <strong>st-014</strong>)
-        </span>
-      </div>
+      )}
 
       <style>{`
         #qr-reader-container video {
