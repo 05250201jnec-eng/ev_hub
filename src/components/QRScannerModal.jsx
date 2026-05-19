@@ -102,8 +102,13 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
             if (!activeBooking) {
               setSteps(prev => prev.map((s, idx) => idx === 2 ? { ...s, status: 'failed' } : s));
               setScanState('failed');
-              setErrorMessage('You must reserve a slot for this station first to scan!');
+              setErrorMessage('You must reserve a station first to scan!');
               addNotification('You must reserve a station first to scan!', 'error');
+              
+              // Automatically redirect to dashboard after 1.8 seconds
+              setTimeout(() => {
+                onClose();
+              }, 1800);
               return;
             }
 
@@ -156,12 +161,12 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
       clearTimeout(timer);
       if (scannerRef.current) {
         try {
-          // Check if active before calling stop to avoid errors
-          if (scannerRef.current.isScanning) {
-            scannerRef.current.stop().catch(err => console.warn(err));
-          }
+          // Unconditional stop with catch handlers to prevent background camera threads from crashing React
+          scannerRef.current.stop()
+            .then(() => console.log("Camera stopped cleanly on unmount"))
+            .catch(err => console.warn("Catching expected duplicate stop rejection:", err));
         } catch (e) {
-          // ignore
+          console.warn("Catching expected duplicate stop sync exception:", e);
         }
       }
     };
@@ -215,6 +220,11 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
         setScanState('failed');
         setErrorMessage('You must reserve a station first to scan!');
         addNotification('You must reserve a station first to scan!', 'error');
+        
+        // Auto redirect to dashboard after 1.8 seconds
+        setTimeout(() => {
+          onClose();
+        }, 1800);
         return;
       }
 

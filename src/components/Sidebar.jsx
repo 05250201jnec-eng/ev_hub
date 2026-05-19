@@ -264,7 +264,10 @@ const Sidebar = ({ isOpen, closeSidebar }) => {
 
       {scannerOpen && (
         <QRScannerModal 
-          onClose={() => setScannerOpen(false)} 
+          onClose={() => {
+            setScannerOpen(false);
+            navigate('/'); // Redirect to dashboard
+          }} 
           onScanSuccess={(stationId) => {
             let targetId = stationId;
             if (stationId === 'universal') {
