@@ -69,7 +69,7 @@ const Login = () => {
         width: '400px',
         height: '400px',
         borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)',
+        background: 'radial-gradient(circle, rgba(16,185,129,0.15) 0%, transparent 70%)',
         top: '-100px',
         right: '-100px',
         animation: 'pulse 4s ease-in-out infinite'
@@ -79,7 +79,7 @@ const Login = () => {
         width: '350px',
         height: '350px',
         borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(139,92,246,0.12) 0%, transparent 70%)',
+        background: 'radial-gradient(circle, rgba(5,150,105,0.12) 0%, transparent 70%)',
         bottom: '-80px',
         left: '-80px',
         animation: 'pulse 5s ease-in-out infinite reverse'
@@ -109,7 +109,7 @@ const Login = () => {
           <div style={{
             position: 'absolute',
             inset: 0,
-            background: 'radial-gradient(circle at 30% 70%, rgba(59,130,246,0.1) 0%, transparent 60%)',
+            background: 'radial-gradient(circle at 30% 70%, rgba(16,185,129,0.1) 0%, transparent 60%)',
           }} />
           
           <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>

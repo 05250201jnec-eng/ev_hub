@@ -10,9 +10,9 @@
   --text-primary:   #f0f6ff;
   --text-secondary: #7c8fad;
 
-  --accent-primary:   #3b82f6;
-  --accent-secondary: #8b5cf6;
-  --accent-gradient: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  --accent-primary:   #10b981;
+  --accent-secondary: #059669;
+  --accent-gradient: linear-gradient(135deg, #10b981, #059669);
 
   /* OCPP Status colors */
   --status-available: #10b981;
@@ -235,17 +235,17 @@ input:focus, select:focus, textarea:focus {
 @keyframes logo-float-glow {
   0%, 100% { 
     transform: translateY(0px); 
-    box-shadow: 0 8px 32px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 8px 32px rgba(16, 185, 129, 0.3);
   }
   50% { 
     transform: translateY(-10px); 
-    box-shadow: 0 15px 45px rgba(59, 130, 246, 0.8), 0 0 20px rgba(139, 92, 246, 0.6);
+    box-shadow: 0 15px 45px rgba(16, 185, 129, 0.8), 0 0 20px rgba(5, 150, 105, 0.6);
   }
 }
 
 @keyframes text-glow {
-  0%, 100% { filter: drop-shadow(0 0 8px rgba(59,130,246,0.3)); }
-  50% { filter: drop-shadow(0 0 20px rgba(59,130,246,0.8)); }
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.3)); }
+  50% { filter: drop-shadow(0 0 20px rgba(16, 185, 129, 0.8)); }
 }
 
 .animate-logo {
