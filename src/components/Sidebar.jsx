@@ -8,11 +8,11 @@ import {
 import QRScannerModal from './QRScannerModal';
 
 const navItems = [
-  { to: '/',        icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
-  { to: '/map',     icon: <Map size={20} />,              label: 'Stations Map' },
-  { to: '/schedule',icon: <Clock size={20} />,            label: 'Schedule' },
-  { to: '/bookings',icon: <Calendar size={20} />,         label: 'My Reservations' },
-  { to: '/profile', icon: <User size={20} />,             label: 'Profile' },
+  { to: '/', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
+  { to: '/map', icon: <Map size={20} />, label: 'Stations Map' },
+  { to: '/schedule', icon: <Clock size={20} />, label: 'Schedule' },
+  { to: '/bookings', icon: <Calendar size={20} />, label: 'My Reservations' },
+  { to: '/profile', icon: <User size={20} />, label: 'Profile' },
 ];
 
 const Sidebar = ({ isOpen, closeSidebar }) => {
@@ -48,7 +48,7 @@ const Sidebar = ({ isOpen, closeSidebar }) => {
   }, [activeSession, notifiedCompleted]);
 
   const available = stations.filter(s => s.status === 'available' || s.status === 'reserved').length;
-  const charging  = stations.filter(s => s.status === 'charging' || s.status === 'occupied').length;
+  const charging = stations.filter(s => s.status === 'charging' || s.status === 'occupied').length;
 
   const handleLogout = async () => {
     await logout();
@@ -133,16 +133,16 @@ const Sidebar = ({ isOpen, closeSidebar }) => {
       </nav>
 
       {/* QR Scanner Button */}
-      <button 
-        onClick={() => setScannerOpen(true)} 
-        className="btn btn-primary hover-scale" 
-        style={{ 
-          margin: '0 0.75rem 1rem', 
-          width: 'calc(100% - 1.5rem)', 
-          padding: '0.85rem', 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '0.75rem', 
+      <button
+        onClick={() => setScannerOpen(true)}
+        className="btn btn-primary hover-scale"
+        style={{
+          margin: '0 0.75rem 1rem',
+          width: 'calc(100% - 1.5rem)',
+          padding: '0.85rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.75rem',
           justifyContent: 'center',
           boxShadow: '0 0 20px rgba(57, 255, 20, 0.4)'
         }}
@@ -153,20 +153,20 @@ const Sidebar = ({ isOpen, closeSidebar }) => {
 
       {/* Active Charging Session Widget */}
       {activeSession && (
-        <div style={{ 
-          margin: '0 0.75rem 1rem', 
-          padding: '1rem', 
-          borderRadius: 'var(--radius-md)', 
-          background: 'var(--bg-tertiary)', 
+        <div style={{
+          margin: '0 0.75rem 1rem',
+          padding: '1rem',
+          borderRadius: 'var(--radius-md)',
+          background: 'var(--bg-tertiary)',
           border: '1px solid var(--accent-primary)',
           boxShadow: '0 0 15px rgba(57, 255, 20, 0.15)'
         }}>
-          <p style={{ 
-            fontSize: '0.65rem', 
-            fontWeight: 800, 
-            color: 'var(--accent-primary)', 
-            marginBottom: '0.5rem', 
-            letterSpacing: '0.08em', 
+          <p style={{
+            fontSize: '0.65rem',
+            fontWeight: 800,
+            color: 'var(--accent-primary)',
+            marginBottom: '0.5rem',
+            letterSpacing: '0.08em',
             textTransform: 'uppercase',
             display: 'flex',
             justifyContent: 'space-between',
@@ -175,7 +175,7 @@ const Sidebar = ({ isOpen, closeSidebar }) => {
             <span>Active Charging</span>
             <span className="live-dot" style={{ background: 'var(--accent-primary)' }} />
           </p>
-          
+
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '0.5rem 0' }}>
             <svg viewBox="0 0 90 32" width="100%" height="45">
               <defs>
@@ -184,10 +184,10 @@ const Sidebar = ({ isOpen, closeSidebar }) => {
                   <stop offset={`${batteryPercent}%`} stopColor="rgba(255,255,255,0.08)" />
                 </linearGradient>
               </defs>
-              <path 
-                d="M10,22 L8,22 C5.8,22 4,20.2 4,18 L4,14 C4,10.7 6.7,8 10,8 L20,8 L28,2 C30,0.5 33,0.5 35,2 L43,8 L76,8 C79.3,8 82,10.7 82,14 L82,18 C82,20.2 80.2,22 78,22 L76,22 C76,18 72,14 67,14 C62,14 58,18 58,22 L32,22 C32,18 28,14 23,14 C18,14 14,18 14,22 Z" 
-                fill="url(#car-fill)" 
-                stroke={batteryPercent === 100 ? "var(--accent-primary)" : "rgba(255,255,255,0.2)"} 
+              <path
+                d="M10,22 L8,22 C5.8,22 4,20.2 4,18 L4,14 C4,10.7 6.7,8 10,8 L20,8 L28,2 C30,0.5 33,0.5 35,2 L43,8 L76,8 C79.3,8 82,10.7 82,14 L82,18 C82,20.2 80.2,22 78,22 L76,22 C76,18 72,14 67,14 C62,14 58,18 58,22 L32,22 C32,18 28,14 23,14 C18,14 14,18 14,22 Z"
+                fill="url(#car-fill)"
+                stroke={batteryPercent === 100 ? "var(--accent-primary)" : "rgba(255,255,255,0.2)"}
                 strokeWidth="1.5"
               />
               <circle cx="23" cy="22" r="4.5" fill="#080f1e" stroke="rgba(255,255,255,0.3)" strokeWidth="1.2" />
@@ -195,13 +195,13 @@ const Sidebar = ({ isOpen, closeSidebar }) => {
               <circle cx="67" cy="22" r="4.5" fill="#080f1e" stroke="rgba(255,255,255,0.3)" strokeWidth="1.2" />
               <circle cx="67" cy="22" r="1.5" fill={batteryPercent > 75 ? 'var(--accent-primary)' : 'rgba(255,255,255,0.2)'} />
             </svg>
-            
+
             <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginTop: '0.25rem' }}>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Battery State</span>
               <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)' }}>{batteryPercent}%</span>
             </div>
           </div>
-          
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.5rem', marginTop: '0.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
               <span style={{ color: 'var(--text-secondary)' }}>Station:</span>
@@ -263,23 +263,23 @@ const Sidebar = ({ isOpen, closeSidebar }) => {
       </div>
 
       {scannerOpen && (
-        <QRScannerModal 
-          onClose={() => setScannerOpen(false)} 
+        <QRScannerModal
+          onClose={() => setScannerOpen(false)}
           onScanSuccess={(stationId) => {
             const station = stations.find(s => s.id === stationId);
             if (station) {
-               addNotification("QR Match! Authenticating...", "info");
-               setTimeout(async () => {
-                 const success = await startSession(station.id);
-                 if (success) {
-                   navigate('/');
-                   if (window.innerWidth <= 768 && closeSidebar) closeSidebar();
-                 }
-               }, 1000);
+              addNotification("QR Match! Authenticating...", "info");
+              setTimeout(async () => {
+                const success = await startSession(station.id);
+                if (success) {
+                  navigate('/');
+                  if (window.innerWidth <= 768 && closeSidebar) closeSidebar();
+                }
+              }, 1000);
             } else {
-               addNotification("Invalid Station QR Code", "error");
+              addNotification("Invalid Station QR Code", "error");
             }
-          }} 
+          }}
         />
       )}
     </aside>
