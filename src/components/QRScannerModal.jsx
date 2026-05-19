@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { X, QrCode, Camera, CheckCircle2 } from 'lucide-react';
+import { X, QrCode, Camera, CheckCircle2, Plug, Zap } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 
 const QRScannerModal = ({ onClose, onScanSuccess }) => {
-  const [scanState, setScanState] = useState('scanning'); // scanning | verifying | success | failed
+  const [scanState, setScanState] = useState('scanning'); // scanning | verifying | plug_in | success | failed
   const [errorMessage, setErrorMessage] = useState('');
   const [currentStep, setCurrentStep] = useState(0);
   const [steps, setSteps] = useState([
@@ -17,6 +17,7 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
   const [libLoaded, setLibLoaded] = useState(false);
   const scannerRef = useRef(null);
   const isCameraActive = useRef(false);
+  const [resolvedStationId, setResolvedStationId] = useState('');
 
   // Load html5-qrcode dynamically from CDN once
   useEffect(() => {
@@ -129,11 +130,9 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
           setSteps(prev => prev.map((s, idx) => idx === 3 ? { ...s, status: 'success' } : s));
           await new Promise(r => setTimeout(r, 500));
 
-          setScanState('success');
-          setTimeout(() => {
-            onScanSuccess(stationId);
-            handleClose();
-          }, 1000);
+          setResolvedStationId(stationId);
+          setScanState('plug_in');
+        };
         };
 
         html5QrCode.start(
@@ -271,11 +270,9 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
         setSteps(prev => prev.map((s, idx) => idx === 3 ? { ...s, status: 'success' } : s));
         await new Promise(r => setTimeout(r, 500));
 
-        setScanState('success');
-        setTimeout(() => {
-          onScanSuccess('universal');
-          handleClose();
-        }, 1000);
+        setResolvedStationId('universal');
+        setScanState('plug_in');
+      };
       };
 
       runVerification();
@@ -331,6 +328,7 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
         <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem' }}>
           {scanState === 'scanning' && 'Align the QR code within the frame to unlock'}
           {scanState === 'verifying' && 'Running secure handshake protocol...'}
+          {scanState === 'plug_in' && 'Vehicle verification successful!'}
           {scanState === 'success' && 'Verification Complete! Charger Unlocked.'}
           {scanState === 'failed' && 'Security Verification Failed'}
         </p>
@@ -351,14 +349,14 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
         <div id="qr-reader-container" style={{ width: '100%', height: '100%' }} />
       </div>
 
-      {scanState !== 'scanning' && (
+      {scanState === 'verifying' || scanState === 'failed' ? (
         <div className="glass animate-fade-in" style={{
           width: '100%',
           maxWidth: '350px',
           padding: '2rem',
           borderRadius: '24px',
-          border: `1px solid ${scanState === 'success' ? 'var(--accent-primary)' : scanState === 'failed' ? '#ef4444' : 'rgba(255,255,255,0.1)'}`,
-          boxShadow: scanState === 'success' ? '0 0 30px rgba(57,255,20,0.15)' : scanState === 'failed' ? '0 0 30px rgba(239,68,68,0.15)' : 'none',
+          border: `1px solid ${scanState === 'failed' ? '#ef4444' : 'rgba(255,255,255,0.1)'}`,
+          boxShadow: scanState === 'failed' ? '0 0 30px rgba(239,68,68,0.15)' : 'none',
           display: 'flex',
           flexDirection: 'column',
           gap: '1rem'
@@ -400,6 +398,66 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
               {errorMessage}
             </div>
           )}
+        </div>
+      ) : null}
+
+      {scanState === 'plug_in' && (
+        <div className="glass animate-fade-in" style={{
+          width: '100%',
+          maxWidth: '350px',
+          padding: '2rem',
+          borderRadius: '24px',
+          border: '1px solid var(--accent-primary)',
+          boxShadow: '0 0 25px rgba(57,255,20,0.12)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '1.5rem',
+          textAlign: 'center'
+        }}>
+          <div className="animate-bounce" style={{
+            width: 70,
+            height: 70,
+            borderRadius: '50%',
+            background: 'rgba(57,255,20,0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--accent-primary)',
+            border: '2px dashed var(--accent-primary)'
+          }}>
+            <Plug size={32} />
+          </div>
+          
+          <div>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'white', marginBottom: '0.5rem' }}>
+              Reservation Verified!
+            </h3>
+            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', lineHeight: '1.4' }}>
+              Unlock complete! Please connect the physical charging cable to your car to begin.
+            </p>
+          </div>
+
+          <button 
+            onClick={() => {
+              onScanSuccess(resolvedStationId);
+              handleClose();
+            }}
+            className="btn btn-primary hover-scale"
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              fontWeight: 700,
+              boxShadow: '0 0 20px rgba(57,255,20,0.3)',
+              fontSize: '0.875rem'
+            }}
+          >
+            <Zap size={16} /> Plug In Charger Cable 🔌
+          </button>
         </div>
       )}
 
