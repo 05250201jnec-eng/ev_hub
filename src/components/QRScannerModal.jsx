@@ -4,7 +4,7 @@ import { useAppContext } from '../context/AppContext';
 
 const QRScannerModal = ({ onClose, onScanSuccess }) => {
   const [scanState, setScanState] = useState('scanning'); // scanning | success
-  const { addNotification } = useAppContext();
+  const { addNotification, bookings, user } = useAppContext();
   const [libLoaded, setLibLoaded] = useState(false);
   const scannerRef = useRef(null);
 
@@ -94,12 +94,28 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
     };
   }, [libLoaded]);
 
-  // Simulate scan fallback
+  // Simulate scan fallback - dynamically picks the user's reserved station
   const handleSimulateScan = () => {
+    let targetStationId = 'st-001';
+    
+    if (user && bookings.length > 0) {
+      const now = new Date();
+      const todayStr = now.toISOString().split('T')[0];
+      // Find user's active booking today
+      const myBooking = bookings.find(b => 
+        b.userId === user.id &&
+        (b.date === todayStr || !b.date) &&
+        ['pending', 'confirmed'].includes(b.status)
+      );
+      if (myBooking) {
+        targetStationId = myBooking.stationId;
+      }
+    }
+
     setScanState('success');
     addNotification('QR Code simulated!', 'success');
     setTimeout(() => {
-      onScanSuccess('st-001');
+      onScanSuccess(targetStationId);
       onClose();
     }, 1200);
   };
@@ -182,7 +198,7 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
           <QrCode size={18} /> Simulate Scan
         </button>
         <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
-          Tip: Point at a QR containing the text: <strong>st-001</strong>
+          Tip: You can scan any QR code containing a valid Station ID (e.g. <strong>st-001</strong>, <strong>st-014</strong>)
         </span>
       </div>
 
