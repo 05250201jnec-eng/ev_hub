@@ -60,7 +60,8 @@ const Login = () => {
       justifyContent: 'center',
       background: 'var(--bg-color)',
       position: 'relative',
-      overflow: 'hidden'
+      overflow: 'hidden',
+      padding: '1rem'
     }}>
       {/* Animated background orbs */}
       <div style={{
@@ -91,8 +92,7 @@ const Login = () => {
         minHeight: '600px',
         borderRadius: 'var(--radius-lg)',
         overflow: 'hidden',
-        boxShadow: 'var(--shadow-lg)',
-        margin: '2rem'
+        boxShadow: 'var(--shadow-lg)'
       }}>
         {/* Left Panel – Branding */}
         <div className="auth-left" style={{
@@ -141,9 +141,10 @@ const Login = () => {
 
             <div style={{
               display: 'flex',
-              gap: '2rem',
-              marginTop: '3rem',
-              justifyContent: 'center'
+              gap: '1.5rem',
+              marginTop: '2rem',
+              justifyContent: 'center',
+              flexWrap: 'wrap'
             }}>
               {[
                 { value: '50+', label: 'Stations' },
@@ -411,11 +412,12 @@ const Login = () => {
         @media (max-width: 768px) {
           .auth-card {
             flex-direction: column !important;
-            margin: 1rem !important;
             min-height: auto !important;
+            max-height: 90vh !important;
+            overflow-y: auto !important;
           }
           .auth-left, .auth-right {
-            padding: 2rem !important;
+            padding: 1.5rem !important;
             flex: none !important;
           }
         }
