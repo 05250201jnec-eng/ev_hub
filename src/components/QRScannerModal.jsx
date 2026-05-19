@@ -33,7 +33,7 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
         scannerRef.current = html5QrCode;
 
         html5QrCode.start(
-          { facingMode: "user" }, // Use front camera
+          { facingMode: "environment" }, // Prioritize back camera for mobile
           {
             fps: 15,
             qrbox: { width: 220, height: 220 }
@@ -58,10 +58,10 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
             // Quietly ignore frame errors when no QR is visible
           }
         ).catch((err) => {
-          console.error("Failed to start QR scanner with front camera, trying rear:", err);
-          // Try environment camera if front camera is not found/errors out
+          console.warn("Back camera failed, trying front camera:", err);
+          // Fallback to user (front) camera if environment camera fails (e.g. on laptops)
           html5QrCode.start(
-            { facingMode: "environment" },
+            { facingMode: "user" },
             { fps: 15, qrbox: { width: 220, height: 220 } },
             (decodedText) => {
               setScanState('success');
@@ -78,7 +78,7 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
             },
             () => {}
           ).catch(fallbackErr => {
-            console.error("All cameras failed:", fallbackErr);
+            console.error("All cameras failed to start:", fallbackErr);
           });
         });
       } catch (err) {
