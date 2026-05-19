@@ -69,7 +69,7 @@ const Login = () => {
         width: '400px',
         height: '400px',
         borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(16,185,129,0.15) 0%, transparent 70%)',
+        background: 'radial-gradient(circle, rgba(57, 255, 20, 0.15) 0%, transparent 70%)',
         top: '-100px',
         right: '-100px',
         animation: 'pulse 4s ease-in-out infinite'
@@ -79,7 +79,7 @@ const Login = () => {
         width: '350px',
         height: '350px',
         borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(5,150,105,0.12) 0%, transparent 70%)',
+        background: 'radial-gradient(circle, rgba(0, 255, 170, 0.12) 0%, transparent 70%)',
         bottom: '-80px',
         left: '-80px',
         animation: 'pulse 5s ease-in-out infinite reverse'
@@ -109,7 +109,7 @@ const Login = () => {
           <div style={{
             position: 'absolute',
             inset: 0,
-            background: 'radial-gradient(circle at 30% 70%, rgba(16,185,129,0.1) 0%, transparent 60%)',
+            background: 'radial-gradient(circle at 30% 70%, rgba(57, 255, 20, 0.1) 0%, transparent 60%)',
           }} />
           
           <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
@@ -121,9 +121,9 @@ const Login = () => {
               alignItems: 'center',
               justifyContent: 'center',
               marginBottom: '2rem',
-              boxShadow: '0 8px 32px rgba(59, 130, 246, 0.3)'
+              boxShadow: '0 8px 32px rgba(57, 255, 20, 0.3)'
             }}>
-              <Zap size={48} color="white" fill="white" />
+              <Zap size={48} color="#080f1e" fill="#080f1e" />
             </div>
 
             <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '1rem' }} className="animate-text-glow">
