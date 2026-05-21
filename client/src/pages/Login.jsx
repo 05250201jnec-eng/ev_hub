@@ -36,7 +36,7 @@ const Login = () => {
         
         // RULE: Admin users go directly to the operator side
         if (formData.email.toLowerCase().endsWith('@evhub.com')) {
-          window.location.href = 'http://localhost:5177';
+          window.location.href = import.meta.env.VITE_ADMIN_URL || 'http://localhost:5177';
           return;
         }
       } else {

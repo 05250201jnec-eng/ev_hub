@@ -77,7 +77,7 @@ const App = () => {
   // RULE: Admins should not be in the User App
   React.useEffect(() => {
     if (isAuthenticated && user?.role === 'admin') {
-      window.location.href = 'http://localhost:5177';
+      window.location.href = import.meta.env.VITE_ADMIN_URL || 'http://localhost:5177';
     }
   }, [isAuthenticated, user]);
 

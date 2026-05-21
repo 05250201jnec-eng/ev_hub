@@ -117,7 +117,7 @@ const Sidebar = ({ isOpen, closeSidebar }) => {
             <p style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-secondary)', padding: '1rem 0.5rem 0.75rem', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
               Admin
             </p>
-            <a href="http://localhost:5177" target="_blank" rel="noreferrer" style={{
+            <a href={import.meta.env.VITE_ADMIN_URL || 'http://localhost:5177'} target="_blank" rel="noreferrer" style={{
               display: 'flex', alignItems: 'center', gap: '0.75rem',
               padding: '0.75rem 0.875rem', borderRadius: 'var(--radius-sm)',
               color: '#8b5cf6', fontWeight: 600, fontSize: '0.9rem',
