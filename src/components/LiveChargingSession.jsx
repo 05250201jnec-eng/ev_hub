@@ -44,6 +44,10 @@ const LiveChargingSession = ({ booking }) => {
           status: 'completed',
           endTime: new Date().toISOString(),
         });
+        // Update the underlying booking to completed if it's linked
+        if (booking.bookingId) {
+          await updateDoc(doc(db, 'bookings', booking.bookingId), { status: 'completed' });
+        }
       } else {
         // Legacy booking session
         const docId = booking.id || booking.firestoreId;
