@@ -1,0 +1,5 @@
+# Wokwi Library Dependencies for EV Hub IoT Node
+# These are auto-installed by Wokwi when you open the project
+
+ArduinoJson@6.21.5
+WebSockets@2.4.1

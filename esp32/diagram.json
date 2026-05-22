@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "author": "EV Hub IoT Node",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-devkit-c-v4",
+      "id": "esp32",
+      "top": 0,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-slide-switch",
+      "id": "reed",
+      "top": 150,
+      "left": -170,
+      "attrs": {},
+      "label": "Magnetic Reed Switch (Slide = Gun Plugged In)"
+    },
+    {
+      "type": "wokwi-relay-module",
+      "id": "relay",
+      "top": -130,
+      "left": 200,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r_green",
+      "top": 60,
+      "left": 200,
+      "attrs": { "value": "220" },
+      "rotate": 90
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led_green",
+      "top": 60,
+      "left": 260,
+      "attrs": { "color": "green" },
+      "label": "Available"
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r_red",
+      "top": 110,
+      "left": 200,
+      "attrs": { "value": "220" },
+      "rotate": 90
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led_red",
+      "top": 110,
+      "left": 260,
+      "attrs": { "color": "red" },
+      "label": "Charging"
+    }
+  ],
+  "connections": [
+    [ "esp32:GND.1",  "reed:1",        "black",  [] ],
+    [ "esp32:18",     "reed:2",        "green",  [] ],
+    [ "esp32:23",     "relay:IN",      "blue",   [] ],
+    [ "esp32:5V",     "relay:VCC",     "red",    [] ],
+    [ "esp32:GND.2",  "relay:GND",     "black",  [] ],
+    [ "esp32:19",     "r_green:1",     "gold",   [] ],
+    [ "r_green:2",    "led_green:A",   "gold",   [] ],
+    [ "led_green:C",  "esp32:GND.3",   "black",  [] ],
+    [ "esp32:21",     "r_red:1",       "orange", [] ],
+    [ "r_red:2",      "led_red:A",     "orange", [] ],
+    [ "led_red:C",    "esp32:GND.3",   "black",  [] ]
+  ],
+  "dependencies": {}
+}
