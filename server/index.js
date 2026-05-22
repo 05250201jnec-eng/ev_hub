@@ -377,17 +377,35 @@ io.on('connection', (socket) => {
 
       console.log(`[IoT] Starting session for user: ${pendingUserName} (${pendingUserId}) at ${stationId}`);
 
-      // 2. Generate session ID
+      // 2. Find the active booking for this user
+      let linkedBookingId = null;
+      const bookingsSnapshot = await db.collection('bookings')
+        .where('userId', '==', pendingUserId)
+        .where('stationId', '==', stationId)
+        .where('status', 'in', ['pending', 'confirmed'])
+        .get();
+
+      if (!bookingsSnapshot.empty) {
+        const bDoc = bookingsSnapshot.docs[0];
+        linkedBookingId = bDoc.id;
+        await db.collection('bookings').doc(linkedBookingId).update({
+          status: 'active',
+          updatedAt: Date.now()
+        });
+      }
+
+      // 3. Generate session ID
       const sessionId = `sess-${stationId}-${Date.now()}`;
       const startTime = new Date().toISOString();
 
-      // 3. Create the active session document — the client app listens for this
+      // 4. Create the active session document — the client app listens for this
       await db.collection('sessions').doc(sessionId).set({
         sessionId,
         stationId,
         stationName: stationData.name || stationId,
         userId: pendingUserId,
         userName: pendingUserName,
+        bookingId: linkedBookingId, // Link the booking
         status: 'active',           // Must match AppContext: find(s => s.status === 'active')
         startTime,
         energyDelivered: 0,
