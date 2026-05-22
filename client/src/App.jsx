@@ -10,6 +10,8 @@ import Bookings from './pages/Bookings';
 import Profile from './pages/Profile';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import Session from './pages/Session';
+
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated } = useAppContext();
