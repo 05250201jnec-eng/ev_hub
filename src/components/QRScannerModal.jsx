@@ -15,11 +15,22 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
     { label: 'Unlocking Charger Solenoid', status: 'pending' }
   ]);
   
-  const { addNotification, bookings, user, stations } = useAppContext();
+  const { addNotification, bookings, user, stations, activeSession } = useAppContext();
   const [libLoaded, setLibLoaded] = useState(false);
   const scannerRef = useRef(null);
   const isCameraActive = useRef(false);
   const [resolvedStationId, setResolvedStationId] = useState('');
+
+  // Auto-close when the physical ESP32 plug trigger starts the session in Firestore
+  useEffect(() => {
+    if (activeSession && resolvedStationId) {
+      const isTargetMatch = resolvedStationId === 'universal' || activeSession.stationId === resolvedStationId;
+      if (isTargetMatch) {
+        addNotification("⚡ Contactless connection established! Charging session started.", "success");
+        handleClose();
+      }
+    }
+  }, [activeSession, resolvedStationId]);
 
   // Load html5-qrcode dynamically from CDN once
   useEffect(() => {
