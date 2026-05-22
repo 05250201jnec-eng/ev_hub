@@ -37,10 +37,20 @@ const LiveChargingSession = ({ booking }) => {
 
   const stopCharging = async () => {
     try {
-      const docId = booking.id || booking.firestoreId;
-      await updateDoc(doc(db, 'bookings', docId), { status: 'completed' });
+      // IoT session: created in 'sessions' collection with source: 'iot-esp32'
+      if (booking.source === 'iot-esp32' || booking.sessionId) {
+        const sessionDocId = booking.id || booking.sessionId;
+        await updateDoc(doc(db, 'sessions', sessionDocId), {
+          status: 'completed',
+          endTime: new Date().toISOString(),
+        });
+      } else {
+        // Legacy booking session
+        const docId = booking.id || booking.firestoreId;
+        await updateDoc(doc(db, 'bookings', docId), { status: 'completed' });
+      }
       await updateStationStatus(booking.stationId, 'available');
-      addNotification('Charging completed successfully', 'success');
+      addNotification('Charging completed successfully ✅', 'success');
     } catch (e) {
       addNotification('Failed to stop charging: ' + e.message, 'error');
     }
