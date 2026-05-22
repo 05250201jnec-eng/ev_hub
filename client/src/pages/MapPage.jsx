@@ -501,13 +501,6 @@ const MapPage = () => {
     }
   };
 
-  const handleStartSession = async (station) => {
-    setStartingSession(true);
-    const success = await startSession(station.id);
-    setStartingSession(false);
-    if (success) setSelected(null);
-  };
-
   const currentSelected = selected ? stations.find(s => s.id === selected.id) : null;
 
   return (
@@ -530,10 +523,16 @@ const MapPage = () => {
           display: flex;
           gap: 0.35rem;
         }
+        .route-info-banner {
+          position: absolute;
+          bottom: 1.5rem;
+          left: 1.5rem;
+          z-index: 1000;
+        }
         @media (max-width: 768px) {
           .map-layout {
             flex-direction: column;
-            height: calc(100vh - 100px) !important;
+            height: calc(100dvh - 100px) !important;
             gap: 0.5rem !important;
           }
           .map-filters-container {
@@ -559,7 +558,7 @@ const MapPage = () => {
             right: 0;
             z-index: 2000;
             border-radius: 24px 24px 0 0 !important;
-            padding: 1.5rem !important;
+            padding: 1.5rem 1.5rem 3rem 1.5rem !important;
             box-shadow: 0 -10px 40px rgba(0,0,0,0.6) !important;
             background: var(--bg-secondary) !important;
             border: 1px solid var(--border-color);
@@ -572,6 +571,17 @@ const MapPage = () => {
           .map-main-area {
             flex: 1;
             height: 100%;
+          }
+          .map-legend {
+            display: none !important;
+          }
+          .route-info-banner {
+            bottom: auto !important;
+            top: 1rem !important;
+            left: 1rem !important;
+            right: auto !important;
+            padding: 0.75rem 1rem !important;
+            gap: 1rem !important;
           }
         }
       `}</style>
@@ -593,27 +603,27 @@ const MapPage = () => {
 
         <div className="glass" style={{ flex: 1, borderRadius: 'var(--radius-lg)', overflow: 'hidden', position: 'relative' }}>
           <div ref={mapRef} style={{ width: '100%', height: '100%' }} />
-
+          
           {/* Map Legend */}
-          <div className="glass" style={{
-            position: 'absolute',
-            top: '1rem',
-            left: '1rem',
-            zIndex: 1000,
-            padding: '0.85rem 1rem',
-            borderRadius: 'var(--radius-md)',
-            display: 'flex',
-            flexDirection: 'column',
+          <div className="glass map-legend" style={{ 
+            position: 'absolute', 
+            top: '1rem', 
+            left: '1rem', 
+            zIndex: 1000, 
+            padding: '0.85rem 1rem', 
+            borderRadius: 'var(--radius-md)', 
+            display: 'flex', 
+            flexDirection: 'column', 
             gap: '0.5rem',
             border: '1px solid rgba(255,255,255,0.08)',
             minWidth: '130px'
           }}>
-            <h4 style={{
-              fontSize: '0.6rem',
-              fontWeight: 800,
-              color: 'var(--text-secondary)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
+            <h4 style={{ 
+              fontSize: '0.6rem', 
+              fontWeight: 800, 
+              color: 'var(--text-secondary)', 
+              textTransform: 'uppercase', 
+              letterSpacing: '0.08em', 
               marginBottom: '0.2rem',
               opacity: 0.8
             }}>Station Legend</h4>
@@ -625,11 +635,11 @@ const MapPage = () => {
               { label: 'Connector Issue', color: '#f97316', icon: Lock }
             ].map(item => (
               <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                <div style={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: '50%',
-                  background: item.color,
+                <div style={{ 
+                  width: 20, 
+                  height: 20, 
+                  borderRadius: '50%', 
+                  background: item.color, 
                   boxShadow: `0 2px 8px ${item.color}55`,
                   border: '1.5px solid white',
                   display: 'flex',
@@ -639,16 +649,16 @@ const MapPage = () => {
                   flexShrink: 0
                 }}>
                   {item.icon ? (
-                    <item.icon
-                      size={11}
-                      strokeWidth={2.5}
-                      fill={item.label === 'Available' || item.label === 'Charging' ? 'white' : 'none'}
+                    <item.icon 
+                       size={11} 
+                       strokeWidth={2.5}
+                       fill={item.label === 'Available' || item.label === 'Charging' ? 'white' : 'none'} 
                     />
                   ) : null}
                 </div>
-                <span style={{
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
+                <span style={{ 
+                  fontSize: '0.75rem', 
+                  fontWeight: 600, 
                   color: 'var(--text-primary)',
                   letterSpacing: '-0.01em'
                 }}>{item.label}</span>
@@ -666,7 +676,7 @@ const MapPage = () => {
           </div>
 
           {routeInfo && (
-            <div className="glass animate-fade-in" style={{ position: 'absolute', bottom: '1.5rem', left: '1.5rem', zIndex: 1000, padding: '1rem 1.5rem', borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', gap: '2rem' }}>
+            <div className="glass animate-fade-in route-info-banner" style={{ padding: '1rem 1.5rem', borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', gap: '2rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}><Navigation2 size={18} color="var(--accent-primary)" /><span style={{ fontWeight: 800, fontSize: '0.9rem' }}>{routeInfo.distance}</span></div>
               <div style={{ width: 1, height: 20, background: 'var(--border-color)' }} />
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}><Clock size={18} color="var(--accent-primary)" /><span style={{ fontWeight: 800, fontSize: '0.9rem' }}>{routeInfo.duration}</span></div>

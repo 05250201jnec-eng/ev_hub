@@ -41,6 +41,37 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* Table horizontal scroll wrapper */
+.table-scroll-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  max-width: 100%;
+  display: block;
+}
+
+/* Hide scrollbar visually but keep it functional */
+.custom-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.15) transparent;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  height: 4px;
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.2);
+  border-radius: 4px;
+}
+
+/* Mobile padding */
+@media (max-width: 768px) {
+  main {
+    padding: 1rem !important;
+  }
+}
+
 .text-gradient {
   background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
   -webkit-background-clip: text;
@@ -49,18 +80,20 @@ body {
 
 /* Scrollbar Styles */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
+  height: 6px; /* Essential to show horizontal scrollbar in Webkit! */
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-bg-primary);
+  background: rgba(15, 23, 42, 0.3);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-bg-tertiary);
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-border);
+  background: rgba(255, 255, 255, 0.3);
 }

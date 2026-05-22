@@ -84,7 +84,7 @@ const Login = () => {
         animation: 'pulse 5s ease-in-out infinite reverse'
       }} />
 
-      <div className="animate-fade-in" style={{
+      <div className="animate-fade-in auth-card" style={{
         display: 'flex',
         width: '100%',
         maxWidth: '1000px',
@@ -95,7 +95,7 @@ const Login = () => {
         margin: '2rem'
       }}>
         {/* Left Panel – Branding */}
-        <div style={{
+        <div className="auth-left" style={{
           flex: 1,
           background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1a1040 100%)',
           display: 'flex',
@@ -160,7 +160,7 @@ const Login = () => {
         </div>
 
         {/* Right Panel – Form */}
-        <div style={{
+        <div className="auth-right" style={{
           flex: 1,
           background: 'var(--bg-secondary)',
           padding: '3rem',

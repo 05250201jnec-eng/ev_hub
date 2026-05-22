@@ -75,10 +75,10 @@ const Schedule = () => {
   };
 
   return (
-    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', height: 'calc(100vh - 120px)' }}>
+    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       {/* Header */}
-      <div className="glass" style={{ padding: '1.5rem', borderRadius: 'var(--radius-lg)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
+      <div className="glass" style={{ padding: '1.5rem', borderRadius: 'var(--radius-lg)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.25rem' }}>
+        <div style={{ minWidth: '200px', flex: '1' }}>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <Clock className="text-primary" /> Charging Schedule
           </h1>
@@ -88,7 +88,7 @@ const Schedule = () => {
         </div>
         
         {/* Date Selector */}
-        <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+        <div className="custom-scrollbar" style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.25rem', width: '100%', maxWidth: '100%', WebkitOverflowScrolling: 'touch' }}>
           {dates.map(date => {
             const d = new Date(date);
             const isSelected = selectedDate === date;
@@ -97,19 +97,19 @@ const Schedule = () => {
                 key={date}
                 onClick={() => setSelectedDate(date)}
                 style={{
-                  padding: '0.75rem 1rem',
+                  padding: '0.625rem 0.875rem',
                   borderRadius: 'var(--radius-md)',
                   background: isSelected ? 'var(--accent-primary)' : 'var(--bg-secondary)',
                   color: isSelected ? 'white' : 'var(--text-primary)',
                   border: `1px solid ${isSelected ? 'var(--accent-primary)' : 'var(--border-color)'}`,
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '80px',
-                  cursor: 'pointer', transition: 'all 0.2s'
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '70px',
+                  cursor: 'pointer', transition: 'all 0.2s', flexShrink: 0
                 }}
               >
-                <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 700, opacity: isSelected ? 0.9 : 0.6 }}>
+                <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', fontWeight: 700, opacity: isSelected ? 0.9 : 0.6 }}>
                   {d.toLocaleDateString('en-US', { weekday: 'short' })}
                 </span>
-                <span style={{ fontSize: '1.125rem', fontWeight: 800 }}>
+                <span style={{ fontSize: '1rem', fontWeight: 800 }}>
                   {d.getDate()}
                 </span>
               </button>
@@ -119,7 +119,7 @@ const Schedule = () => {
       </div>
 
       {/* Legend */}
-      <div style={{ display: 'flex', gap: '1.5rem', padding: '0 0.5rem' }}>
+      <div style={{ display: 'flex', gap: '1.25rem', padding: '0 0.5rem', flexWrap: 'wrap' }}>
         {[
           { label: 'Available', color: STATUS_COLORS.available },
           { label: 'Reserved', color: STATUS_COLORS.reserved },
@@ -133,8 +133,8 @@ const Schedule = () => {
       </div>
 
       {/* Schedule Grid */}
-      <div className="glass" style={{ flex: 1, borderRadius: 'var(--radius-lg)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ overflowY: 'auto', padding: '1.5rem', flex: 1 }}>
+      <div className="glass" style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+        <div style={{ padding: '1.5rem' }}>
           {stations.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-secondary)' }}>
               <AlertCircle size={48} style={{ margin: '0 auto 1rem', opacity: 0.5 }} />

@@ -52,13 +52,14 @@ const Bookings = () => {
       </div>
 
       {/* Filter Tabs */}
-      <div className="glass" style={{ display: 'flex', padding: '0.35rem', borderRadius: 'var(--radius-md)', gap: '0.35rem', width: 'fit-content' }}>
+      <div className="glass custom-scrollbar" style={{ display: 'flex', padding: '0.35rem', borderRadius: 'var(--radius-md)', gap: '0.35rem', width: '100%', maxWidth: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
         {['all', 'pending', 'confirmed', 'active', 'completed', 'cancelled'].map(f => (
           <button key={f} onClick={() => setFilter(f)} style={{
             padding: '0.5rem 1rem', borderRadius: 'var(--radius-sm)', fontSize: '0.75rem', fontWeight: 700,
             background: filter === f ? 'var(--accent-primary)' : 'transparent',
             color: filter === f ? 'white' : 'var(--text-secondary)',
             transition: 'all 0.2s', textTransform: 'capitalize',
+            flexShrink: 0
           }}>{f}</button>
         ))}
       </div>

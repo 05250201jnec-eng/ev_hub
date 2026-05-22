@@ -1,9 +1,9 @@
 import React from 'react';
-import { Search, Bell, User, Zap, Wifi, WifiOff } from 'lucide-react';
+import { Search, Bell, WifiOff, Menu } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 
-const Navbar = () => {
-  const { user, simulatorStatus, activeSession } = useAppContext();
+const Navbar = ({ toggleSidebar }) => {
+  const { user, simulatorStatus } = useAppContext();
 
   return (
     <header className="glass" style={{
@@ -11,7 +11,7 @@ const Navbar = () => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      padding: '0 2rem',
+      padding: '0 1.5rem',
       position: 'sticky',
       top: 0,
       zIndex: 100,
@@ -19,8 +19,13 @@ const Navbar = () => {
       borderRadius: 0,
       boxShadow: 'none',
     }}>
+      {/* Hamburger — visible only on mobile via CSS */}
+      <button className="menu-toggle" onClick={toggleSidebar} aria-label="Open menu">
+        <Menu size={24} />
+      </button>
+
       {/* Search Bar */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
+      <div className="navbar-search" style={{ flex: 1, display: 'flex', alignItems: 'center', marginLeft: '1rem' }}>
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -53,53 +58,42 @@ const Navbar = () => {
       </div>
 
       {/* Right Side Actions */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-        
-        {/* Simulator Status Indicator */}
+      <div className="navbar-actions" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+
+        {/* Simulator Status */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--bg-tertiary)', padding: '0.4rem 0.875rem', borderRadius: 'var(--radius-full)', border: '1px solid var(--border-color)' }}>
           {simulatorStatus === 'connected' ? (
-            <><div className="live-dot" /><span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--status-available)' }}>SIMULATOR LIVE</span></>
+            <><div className="live-dot" /><span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--status-available)' }}>LIVE</span></>
           ) : (
             <><WifiOff size={14} color="var(--text-secondary)" /><span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>OFFLINE</span></>
           )}
         </div>
 
         {/* Notifications */}
-        <button style={{ position: 'relative', color: 'var(--text-secondary)', transition: 'all 0.2s' }} 
+        <button style={{ position: 'relative', color: 'var(--text-secondary)', transition: 'all 0.2s' }}
           onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
           onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'}
         >
           <Bell size={20} />
           <span style={{
-            position: 'absolute',
-            top: -2,
-            right: -2,
-            background: 'var(--accent-primary)',
-            width: 8,
-            height: 8,
-            borderRadius: '50%',
-            border: '2px solid var(--bg-color)',
+            position: 'absolute', top: -2, right: -2,
+            background: 'var(--accent-primary)', width: 8, height: 8,
+            borderRadius: '50%', border: '2px solid var(--bg-color)',
           }}></span>
         </button>
 
         {/* User Info */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', paddingLeft: '1.5rem', borderLeft: '1px solid var(--border-color)' }}>
+        <div className="navbar-user-info" style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', paddingLeft: '1.25rem', borderLeft: '1px solid var(--border-color)' }}>
           <div style={{ textAlign: 'right' }}>
             <p style={{ fontSize: '0.875rem', fontWeight: 700, margin: 0 }}>{user?.name || 'Guest'}</p>
             <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{user?.role || 'EV Owner'}</p>
           </div>
           <div style={{
-            width: 42,
-            height: 42,
-            borderRadius: '50%',
+            width: 40, height: 40, borderRadius: '50%',
             background: 'var(--accent-gradient)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '1rem',
-            fontWeight: 800,
-            color: 'white',
-            boxShadow: '0 4px 12px rgba(59,130,246,0.3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '1rem', fontWeight: 800, color: 'white',
+            boxShadow: '0 4px 12px rgba(59,130,246,0.3)', flexShrink: 0,
           }}>
             {user?.name?.charAt(0).toUpperCase() || 'U'}
           </div>

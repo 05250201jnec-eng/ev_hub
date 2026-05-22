@@ -28,7 +28,7 @@ const BookingModal = ({ station, onClose }) => {
   };
 
   return (
-    <div style={{
+    <div className="modal-overlay" style={{
       position: 'fixed',
       inset: 0,
       background: 'rgba(0,0,0,0.5)',
@@ -38,7 +38,7 @@ const BookingModal = ({ station, onClose }) => {
       justifyContent: 'center',
       zIndex: 9999
     }}>
-      <div className="glass animate-fade-in" style={{
+      <div className="glass animate-fade-in modal-content" style={{
         width: '100%',
         maxWidth: '500px',
         borderRadius: 'var(--radius-lg)',

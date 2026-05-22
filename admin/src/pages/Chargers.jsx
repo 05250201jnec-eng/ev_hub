@@ -90,99 +90,102 @@ const Chargers = () => {
       {msg && <div style={{ padding: '0.875rem 1.25rem', borderRadius: 12, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', color: '#10b981', fontWeight: 600 }}>{msg}</div>}
 
       {/* Filters */}
-      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', width: '100%' }}>
         <div style={{ position: 'relative', flex: '1 1 240px' }}>
           <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#475569' }} />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search stations..."
             style={{ paddingLeft: 36, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: 'white', padding: '0.625rem 0.875rem 0.625rem 2.25rem', width: '100%', fontSize: '0.875rem' }} />
         </div>
-        <div style={{ display: 'flex', gap: '0.375rem' }}>
+        <div className="custom-scrollbar" style={{ display: 'flex', gap: '0.375rem', overflowX: 'auto', WebkitOverflowScrolling: 'touch', maxWidth: '100%', paddingBottom: '4px' }}>
           {['all', 'available', 'charging', 'reserved', 'offline'].map(f => (
             <button key={f} onClick={() => setStatusFilter(f)} style={{
               padding: '0.5rem 0.875rem', borderRadius: 8, fontSize: '0.75rem', fontWeight: 700,
               background: statusFilter === f ? '#3b82f6' : 'rgba(255,255,255,0.06)',
               color: statusFilter === f ? 'white' : '#64748b',
               border: 'none', cursor: 'pointer', textTransform: 'capitalize',
+              whiteSpace: 'nowrap',
             }}>{f === 'offline' ? 'inactive' : f}</button>
           ))}
         </div>
       </div>
 
       {/* Table */}
-      <div className="glass" style={{ borderRadius: 20, overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-              {['Station', 'Location', 'Status', 'Connectors', 'Actions'].map(h => (
-                <th key={h} style={{ padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.7rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((s, i) => (
-              <tr key={s.id} style={{
-                borderBottom: i < filtered.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
-                transition: 'background 0.15s',
-              }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.025)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              >
-                <td style={{ padding: '1rem 1.25rem' }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.875rem', marginBottom: '0.125rem' }}>{s.name}</div>
-                  <div style={{ fontSize: '0.7rem', color: '#475569' }}>{s.id}</div>
-                </td>
-                <td style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.8rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                    <MapPin size={13} />
-                    <span style={{ maxWidth: 160, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                      {s.location?.address}
-                    </span>
-                  </div>
-                </td>
-                <td style={{ padding: '1rem 1.25rem' }}>
-                  <select value={s.status} onChange={e => overrideStationStatus(s.id, e.target.value)}
-                    style={{
-                      padding: '0.35rem 0.625rem', borderRadius: 8, fontSize: '0.75rem', fontWeight: 700,
-                      background: `${STATUS_COLOR[s.status] || '#475569'}22`,
-                      border: `1px solid ${STATUS_COLOR[s.status] || '#475569'}55`,
-                      color: STATUS_COLOR[s.status] || '#94a3b8', cursor: 'pointer',
-                    }}>
-                    {['available', 'reserved', 'charging', 'offline'].map(st => (
-                      <option key={st} value={st} style={{ background: '#0f1a2e', color: 'white' }}>{st === 'offline' ? 'inactive' : st}</option>
-                    ))}
-                  </select>
-                </td>
-                <td style={{ padding: '1rem 1.25rem', fontSize: '0.8rem', color: '#64748b' }}>
-                  {s.connectors?.length || 0} port{s.connectors?.length !== 1 ? 's' : ''}
-                  <span style={{ marginLeft: '0.375rem', color: '#10b981' }}>
-                    ({(s.connectors || []).filter(c => c.status === 'available').length} free)
-                  </span>
-                </td>
-                <td style={{ padding: '1rem 1.25rem' }}>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button onClick={() => openEdit(s)} style={{
-                      padding: '0.4rem', borderRadius: 8, background: 'rgba(59,130,246,0.12)',
-                      border: '1px solid rgba(59,130,246,0.2)', color: '#3b82f6', cursor: 'pointer',
-                    }}>
-                      <Edit2 size={14} />
-                    </button>
-                    <button onClick={() => handleDelete(s.id)} style={{
-                      padding: '0.4rem', borderRadius: 8, background: 'rgba(239,68,68,0.1)',
-                      border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', cursor: 'pointer',
-                    }}>
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </td>
+      <div className="glass" style={{ borderRadius: 20 }}>
+        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%' }}>
+          <table style={{ width: '100%', minWidth: '760px', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                {['Station', 'Location', 'Status', 'Connectors', 'Actions'].map(h => (
+                  <th key={h} style={{ padding: '1rem 1.25rem', textAlign: 'left', fontSize: '0.7rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{h}</th>
+                ))}
               </tr>
-            ))}
-            {filtered.length === 0 && (
-              <tr><td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: '#475569' }}>
-                No stations found. Click <strong>Seed All Stations</strong> to populate.
-              </td></tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filtered.map((s, i) => (
+                <tr key={s.id} style={{
+                  borderBottom: i < filtered.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                  transition: 'background 0.15s',
+                }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.025)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <td style={{ padding: '1rem 1.25rem' }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.875rem', marginBottom: '0.125rem' }}>{s.name}</div>
+                    <div style={{ fontSize: '0.7rem', color: '#475569' }}>{s.id}</div>
+                  </td>
+                  <td style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.8rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                      <MapPin size={13} />
+                      <span style={{ maxWidth: 160, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                        {s.location?.address}
+                      </span>
+                    </div>
+                  </td>
+                  <td style={{ padding: '1rem 1.25rem' }}>
+                    <select value={s.status} onChange={e => overrideStationStatus(s.id, e.target.value)}
+                      style={{
+                        padding: '0.35rem 0.625rem', borderRadius: 8, fontSize: '0.75rem', fontWeight: 700,
+                        background: `${STATUS_COLOR[s.status] || '#475569'}22`,
+                        border: `1px solid ${STATUS_COLOR[s.status] || '#475569'}55`,
+                        color: STATUS_COLOR[s.status] || '#94a3b8', cursor: 'pointer',
+                      }}>
+                      {['available', 'reserved', 'charging', 'offline'].map(st => (
+                        <option key={st} value={st} style={{ background: '#0f1a2e', color: 'white' }}>{st === 'offline' ? 'inactive' : st}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td style={{ padding: '1rem 1.25rem', fontSize: '0.8rem', color: '#64748b' }}>
+                    {s.connectors?.length || 0} port{s.connectors?.length !== 1 ? 's' : ''}
+                    <span style={{ marginLeft: '0.375rem', color: '#10b981' }}>
+                      ({(s.connectors || []).filter(c => c.status === 'available').length} free)
+                    </span>
+                  </td>
+                  <td style={{ padding: '1rem 1.25rem' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button onClick={() => openEdit(s)} style={{
+                        padding: '0.4rem', borderRadius: 8, background: 'rgba(59,130,246,0.12)',
+                        border: '1px solid rgba(59,130,246,0.2)', color: '#3b82f6', cursor: 'pointer',
+                      }}>
+                        <Edit2 size={14} />
+                      </button>
+                      <button onClick={() => handleDelete(s.id)} style={{
+                        padding: '0.4rem', borderRadius: 8, background: 'rgba(239,68,68,0.1)',
+                        border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', cursor: 'pointer',
+                      }}>
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {filtered.length === 0 && (
+                <tr><td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: '#475569' }}>
+                  No stations found. Click <strong>Seed All Stations</strong> to populate.
+                </td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Modal */}

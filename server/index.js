@@ -209,7 +209,7 @@ function simulateStopTransaction(stationId) {
       startTime: new Date(state.sessionStartTime).toISOString(),
       endTime: new Date().toISOString(),
       source: 'ocpp-simulator',
-    }).catch(() => {});
+    }).catch(() => { });
   }
 
   state.sessionId = null;
@@ -325,13 +325,13 @@ io.on('connection', (socket) => {
     if (stationState[stationId]) {
       const prevState = stationState[stationId].status;
       console.log(`[Demo] Manual event trigger: ${event} for ${stationId} (Prev: ${prevState})`);
-      
+
       if (event === 'plug_in') {
         if (prevState === 'reserved') {
-           log(stationId, 'Alert', { message: 'Conflict: Physical connection detected on reserved station!' });
-           io.emit('reservation_conflict', { stationId });
+          log(stationId, 'Alert', { message: 'Conflict: Physical connection detected on reserved station!' });
+          io.emit('reservation_conflict', { stationId });
         } else {
-           log(stationId, 'Notification', { message: 'Guest session started (Physical plug-in on available station)' });
+          log(stationId, 'Notification', { message: 'Guest session started (Physical plug-in on available station)' });
         }
         simulateStartTransaction(stationId);
         simulateStatusChange(stationId, 'charging');

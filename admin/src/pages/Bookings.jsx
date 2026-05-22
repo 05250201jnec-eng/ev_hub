@@ -77,88 +77,91 @@ const AdminBookings = () => {
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by station or user..."
             style={{ paddingLeft: 34, width: '100%', padding: '0.625rem 0.875rem 0.625rem 2.1rem', borderRadius: 10, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', fontSize: '0.875rem' }} />
         </div>
-        <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
+        <div className="custom-scrollbar" style={{ display: 'flex', gap: '0.375rem', overflowX: 'auto', WebkitOverflowScrolling: 'touch', maxWidth: '100%', paddingBottom: '4px' }}>
           {['all', ...Object.keys(STATUS)].map(f => (
             <button key={f} onClick={() => setFilter(f)} style={{
               padding: '0.45rem 0.875rem', borderRadius: 8, fontSize: '0.75rem', fontWeight: 700,
               background: filter === f ? '#3b82f6' : 'rgba(255,255,255,0.06)',
               color: filter === f ? 'white' : '#64748b',
               border: 'none', cursor: 'pointer', textTransform: 'capitalize', transition: 'all 0.2s',
+              whiteSpace: 'nowrap',
             }}>{f}</button>
           ))}
         </div>
       </div>
 
       {/* Table */}
-      <div className="glass" style={{ borderRadius: 20, overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-              {['User', 'Station', 'Time / Duration', 'Status', 'Created', 'Actions'].map(h => (
-                <th key={h} style={{ padding: '0.875rem 1.25rem', textAlign: 'left', fontSize: '0.7rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((b, i) => {
-              const s = STATUS[b.status] || STATUS.pending;
-              return (
-                <tr key={b.id} style={{ borderBottom: i < filtered.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.025)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                  <td style={{ padding: '0.875rem 1.25rem' }}>
-                    <p style={{ fontWeight: 700, fontSize: '0.875rem' }}>{b.userName || 'Unknown'}</p>
-                    <p style={{ fontSize: '0.7rem', color: '#475569' }}>{b.userId?.slice(0, 12)}...</p>
-                  </td>
-                  <td style={{ padding: '0.875rem 1.25rem', fontSize: '0.8rem', color: '#94a3b8' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                      <MapPin size={13} />{b.stationName || '—'}
-                    </div>
-                  </td>
-                  <td style={{ padding: '0.875rem 1.25rem', fontSize: '0.8rem', color: '#94a3b8' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}><Clock size={13}/>{b.time}</div>
-                    <div style={{ fontSize: '0.7rem', color: '#475569', marginTop: '0.2rem' }}>{b.duration} mins</div>
-                  </td>
-                  <td style={{ padding: '0.875rem 1.25rem' }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', padding: '0.25rem 0.625rem', borderRadius: 999, background: s.bg, color: s.color, fontSize: '0.75rem', fontWeight: 700 }}>
-                      {s.icon}{s.label}
-                    </span>
-                  </td>
-                  <td style={{ padding: '0.875rem 1.25rem', fontSize: '0.75rem', color: '#475569' }}>
-                    {b.createdAt ? new Date(b.createdAt).toLocaleDateString() : '—'}
-                  </td>
-                  <td style={{ padding: '0.875rem 1.25rem' }}>
-                    <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
-                      {b.status === 'pending' && (
-                        <>
-                          <button onClick={() => updateStatus(b.id, 'confirmed')} disabled={updating === b.id} style={{ padding: '0.3rem 0.625rem', borderRadius: 7, fontSize: '0.7rem', fontWeight: 700, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', color: '#10b981', cursor: 'pointer' }}>
-                            Confirm
-                          </button>
-                          <button onClick={() => updateStatus(b.id, 'rejected')} disabled={updating === b.id} style={{ padding: '0.3rem 0.625rem', borderRadius: 7, fontSize: '0.7rem', fontWeight: 700, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', cursor: 'pointer' }}>
-                            Reject
-                          </button>
-                        </>
-                      )}
-                      {b.status === 'confirmed' && (
-                        <>
-                          <button onClick={() => updateStatus(b.id, 'completed')} disabled={updating === b.id} style={{ padding: '0.3rem 0.625rem', borderRadius: 7, fontSize: '0.7rem', fontWeight: 700, background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.25)', color: '#8b5cf6', cursor: 'pointer' }}>
-                            Complete
-                          </button>
-                          <button onClick={() => updateStatus(b.id, 'cancelled')} disabled={updating === b.id} style={{ padding: '0.3rem 0.625rem', borderRadius: 7, fontSize: '0.7rem', fontWeight: 700, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', cursor: 'pointer' }}>
-                            Cancel
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-            {filtered.length === 0 && (
-              <tr><td colSpan={6} style={{ padding: '3rem', textAlign: 'center', color: '#475569' }}>No reservations found.</td></tr>
-            )}
-          </tbody>
-        </table>
+      <div className="glass" style={{ borderRadius: 20 }}>
+        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%' }}>
+          <table style={{ width: '100%', minWidth: '800px', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                {['User', 'Station', 'Time / Duration', 'Status', 'Created', 'Actions'].map(h => (
+                  <th key={h} style={{ padding: '0.875rem 1.25rem', textAlign: 'left', fontSize: '0.7rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((b, i) => {
+                const s = STATUS[b.status] || STATUS.pending;
+                return (
+                  <tr key={b.id} style={{ borderBottom: i < filtered.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.025)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                    <td style={{ padding: '0.875rem 1.25rem' }}>
+                      <p style={{ fontWeight: 700, fontSize: '0.875rem' }}>{b.userName || 'Unknown'}</p>
+                      <p style={{ fontSize: '0.7rem', color: '#475569' }}>{b.userId?.slice(0, 12)}...</p>
+                    </td>
+                    <td style={{ padding: '0.875rem 1.25rem', fontSize: '0.8rem', color: '#94a3b8' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                        <MapPin size={13} />{b.stationName || '—'}
+                      </div>
+                    </td>
+                    <td style={{ padding: '0.875rem 1.25rem', fontSize: '0.8rem', color: '#94a3b8' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}><Clock size={13}/>{b.time}</div>
+                      <div style={{ fontSize: '0.7rem', color: '#475569', marginTop: '0.2rem' }}>{b.duration} mins</div>
+                    </td>
+                    <td style={{ padding: '0.875rem 1.25rem' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', padding: '0.25rem 0.625rem', borderRadius: 999, background: s.bg, color: s.color, fontSize: '0.75rem', fontWeight: 700 }}>
+                        {s.icon}{s.label}
+                      </span>
+                    </td>
+                    <td style={{ padding: '0.875rem 1.25rem', fontSize: '0.75rem', color: '#475569' }}>
+                      {b.createdAt ? new Date(b.createdAt).toLocaleDateString() : '—'}
+                    </td>
+                    <td style={{ padding: '0.875rem 1.25rem' }}>
+                      <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
+                        {b.status === 'pending' && (
+                          <>
+                            <button onClick={() => updateStatus(b.id, 'confirmed')} disabled={updating === b.id} style={{ padding: '0.3rem 0.625rem', borderRadius: 7, fontSize: '0.7rem', fontWeight: 700, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', color: '#10b981', cursor: 'pointer' }}>
+                              Confirm
+                            </button>
+                            <button onClick={() => updateStatus(b.id, 'rejected')} disabled={updating === b.id} style={{ padding: '0.3rem 0.625rem', borderRadius: 7, fontSize: '0.7rem', fontWeight: 700, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', cursor: 'pointer' }}>
+                              Reject
+                            </button>
+                          </>
+                        )}
+                        {b.status === 'confirmed' && (
+                          <>
+                            <button onClick={() => updateStatus(b.id, 'completed')} disabled={updating === b.id} style={{ padding: '0.3rem 0.625rem', borderRadius: 7, fontSize: '0.7rem', fontWeight: 700, background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.25)', color: '#8b5cf6', cursor: 'pointer' }}>
+                              Complete
+                            </button>
+                            <button onClick={() => updateStatus(b.id, 'cancelled')} disabled={updating === b.id} style={{ padding: '0.3rem 0.625rem', borderRadius: 7, fontSize: '0.7rem', fontWeight: 700, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', cursor: 'pointer' }}>
+                              Cancel
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {filtered.length === 0 && (
+                <tr><td colSpan={6} style={{ padding: '3rem', textAlign: 'center', color: '#475569' }}>No reservations found.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

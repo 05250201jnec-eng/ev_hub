@@ -91,6 +91,7 @@ const Sidebar = ({ isOpen, closeSidebar }) => {
             key={item.to}
             to={item.to}
             end={item.to === '/'}
+            onClick={() => { if (window.innerWidth <= 768 && closeSidebar) closeSidebar(); }}
             style={({ isActive }) => ({
               display: 'flex', alignItems: 'center', gap: '0.75rem',
               padding: '0.75rem 0.875rem', borderRadius: 'var(--radius-sm)',

@@ -14,7 +14,7 @@ const navItems = [
   { to: '/profile', icon: <User size={20} />,             label: 'Profile' },
 ];
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen, closeSidebar }) => {
   const { user, logout, stations, simulatorStatus, activeSession } = useAppContext();
   const navigate = useNavigate();
 
@@ -27,7 +27,7 @@ const Sidebar = () => {
   };
 
   return (
-    <aside style={{
+    <aside className={`sidebar ${isOpen ? 'open' : ''}`} style={{
       width: 'var(--sidebar-width)',
       background: 'var(--bg-secondary)',
       borderRight: '1px solid var(--border-color)',
@@ -62,6 +62,7 @@ const Sidebar = () => {
             key={item.to}
             to={item.to}
             end={item.to === '/'}
+            onClick={() => { if (window.innerWidth <= 768 && closeSidebar) closeSidebar(); }}
             style={({ isActive }) => ({
               display: 'flex', alignItems: 'center', gap: '0.75rem',
               padding: '0.75rem 0.875rem', borderRadius: 'var(--radius-sm)',
