@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { X, QrCode, Camera, CheckCircle2, Plug, Zap } from 'lucide-react';
+import { X, QrCode, Camera, CheckCircle2, Plug, Zap, RefreshCw } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
+import { db } from '../firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 
 const QRScannerModal = ({ onClose, onScanSuccess }) => {
   const [scanState, setScanState] = useState('scanning'); // scanning | verifying | plug_in | success | failed
