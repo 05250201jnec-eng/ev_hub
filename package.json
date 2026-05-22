@@ -9,6 +9,7 @@
     "dev:user": "vite",
     "dev:admin": "cd admin && npm run dev",
     "dev:server": "cd server && node index.js",
+    "autopush": "node autopush.mjs",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
