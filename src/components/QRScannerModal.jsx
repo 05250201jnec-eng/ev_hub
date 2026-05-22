@@ -333,8 +333,20 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
         setSteps(prev => prev.map((s, idx) => idx === 3 ? { ...s, status: 'success' } : s));
         await new Promise(r => setTimeout(r, 500));
 
-        setResolvedStationId('universal');
+        // Resolve the real station ID (never use 'universal' for IoT matching)
+        const realStationId = activeBooking.stationId;
+        setResolvedStationId(realStationId);
         setScanState('plug_in');
+
+        // Contactless update: tell Firestore this user is waiting to plug in at this station
+        if (db && realStationId) {
+          updateDoc(doc(db, 'stations', realStationId), {
+            status: 'plug_in',
+            plugInUser: user.id,
+            plugInUserName: user.name,
+            lastUpdated: Date.now()
+          }).catch(err => console.error("Firestore station plug_in update failed:", err));
+        }
       };
 
       runVerification();
