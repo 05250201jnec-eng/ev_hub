@@ -304,8 +304,15 @@ const Dashboard = () => {
             <h2 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem' }}>Quick Actions</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <button
-                onClick={() => navigate('/map')}
+                onClick={() => navigate('/session')}
                 className="btn btn-primary"
+                style={{ width: '100%', justifyContent: 'flex-start', gap: '0.75rem', background: 'linear-gradient(135deg, var(--accent-primary) 0%, #2563eb 100%)', boxShadow: '0 4px 12px rgba(59,130,246,0.2)' }}
+              >
+                <Zap size={18} /> Scan QR Code to Charge
+              </button>
+              <button
+                onClick={() => navigate('/map')}
+                className="btn btn-secondary"
                 style={{ width: '100%', justifyContent: 'flex-start', gap: '0.75rem' }}
               >
                 <MapPin size={18} /> Find Charging Station
