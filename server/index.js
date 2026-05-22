@@ -434,6 +434,43 @@ io.on('connection', (socket) => {
 
     if (db) {
       try {
+        // 1. Find the active session for this station
+        const activeSessions = await db.collection('sessions')
+          .where('stationId', '==', stationId)
+          .where('status', '==', 'active')
+          .get();
+
+        activeSessions.forEach(async (doc) => {
+          const sessionData = doc.data();
+          // Mark session completed
+          await db.collection('sessions').doc(doc.id).update({
+            status: 'completed',
+            endTime: new Date().toISOString()
+          });
+
+          // 2. Mark the associated booking completed
+          if (sessionData.bookingId) {
+            await db.collection('bookings').doc(sessionData.bookingId).update({
+              status: 'completed',
+              updatedAt: Date.now()
+            });
+          } else {
+            // Fallback: try to find any active booking for this user and station
+            const activeBookings = await db.collection('bookings')
+              .where('userId', '==', sessionData.userId)
+              .where('stationId', '==', stationId)
+              .where('status', '==', 'active')
+              .get();
+            activeBookings.forEach(async (bDoc) => {
+              await db.collection('bookings').doc(bDoc.id).update({
+                status: 'completed',
+                updatedAt: Date.now()
+              });
+            });
+          }
+        });
+
+        // 3. Reset the station state
         await db.collection('stations').doc(stationId).update({
           status: 'available',
           plugInUser: null,
