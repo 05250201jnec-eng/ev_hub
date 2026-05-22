@@ -117,6 +117,7 @@ const App = () => {
         <Route path="schedule" element={<Schedule />} />
         <Route path="bookings" element={<Bookings />} />
         <Route path="profile" element={<Profile />} />
+        <Route path="session" element={<Session />} />
       </Route>
       <Route path="/logout" element={<LogoutAction />} />
     </Routes>
