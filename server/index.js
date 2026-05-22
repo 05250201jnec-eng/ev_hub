@@ -388,7 +388,7 @@ io.on('connection', (socket) => {
         stationName: stationData.name || stationId,
         userId: pendingUserId,
         userName: pendingUserName,
-        status: 'charging',
+        status: 'active',           // Must match AppContext: find(s => s.status === 'active')
         startTime,
         energyDelivered: 0,
         source: 'iot-esp32',
