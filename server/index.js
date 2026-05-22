@@ -346,6 +346,107 @@ io.on('connection', (socket) => {
     }
   });
 
+  // ── Physical IoT Plug Events (from ESP32 / Wokwi hardware node) ──────────────
+  socket.on('charger_plugged', async ({ stationId }) => {
+    console.log(`[IoT] Physical plug-in detected at station: ${stationId}`);
+    log(stationId, 'IoT_PlugIn', { source: 'ESP32', stationId });
+
+    if (!db) {
+      // No Firestore: just simulate the session
+      simulateStartTransaction(stationId);
+      simulateStatusChange(stationId, 'charging');
+      return;
+    }
+
+    try {
+      // 1. Read the pending user who scanned the QR code for this station
+      const stationDoc = await db.collection('stations').doc(stationId).get();
+      if (!stationDoc.exists) {
+        console.warn(`[IoT] Station ${stationId} not found in Firestore`);
+        return;
+      }
+
+      const stationData = stationDoc.data();
+      const pendingUserId = stationData.plugInUser;
+      const pendingUserName = stationData.plugInUserName;
+
+      if (!pendingUserId) {
+        console.warn(`[IoT] No pending user at station ${stationId} — ignoring plug event`);
+        return;
+      }
+
+      console.log(`[IoT] Starting session for user: ${pendingUserName} (${pendingUserId}) at ${stationId}`);
+
+      // 2. Generate session ID
+      const sessionId = `sess-${stationId}-${Date.now()}`;
+      const startTime = new Date().toISOString();
+
+      // 3. Create the active session document — the client app listens for this
+      await db.collection('sessions').doc(sessionId).set({
+        sessionId,
+        stationId,
+        stationName: stationData.name || stationId,
+        userId: pendingUserId,
+        userName: pendingUserName,
+        status: 'charging',
+        startTime,
+        energyDelivered: 0,
+        source: 'iot-esp32',
+      });
+
+      // 4. Update the station to charging state and clear the pending user
+      await db.collection('stations').doc(stationId).update({
+        status: 'charging',
+        plugInUser: null,
+        plugInUserName: null,
+        activeSessionId: sessionId,
+        lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // 5. Update in-memory state & broadcast
+      if (stationState[stationId]) {
+        stationState[stationId].status = 'charging';
+        stationState[stationId].sessionId = sessionId;
+        stationState[stationId].sessionStartTime = Date.now();
+      }
+
+      io.emit('station_status_update', {
+        stationId,
+        status: 'charging',
+        color: STATUS_COLORS['charging'],
+        timestamp: Date.now(),
+      });
+
+      io.emit('session_started', { stationId, sessionId, userId: pendingUserId, startTime });
+      console.log(`[IoT] Session ${sessionId} started successfully for ${pendingUserName}`);
+
+    } catch (err) {
+      console.error('[IoT] charger_plugged handler error:', err.message);
+    }
+  });
+
+  socket.on('charger_unplugged', async ({ stationId }) => {
+    console.log(`[IoT] Physical unplug detected at station: ${stationId}`);
+    log(stationId, 'IoT_Unplug', { source: 'ESP32', stationId });
+
+    simulateStopTransaction(stationId);
+    simulateStatusChange(stationId, 'available');
+
+    if (db) {
+      try {
+        await db.collection('stations').doc(stationId).update({
+          status: 'available',
+          plugInUser: null,
+          plugInUserName: null,
+          activeSessionId: null,
+          lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      } catch (err) {
+        console.error('[IoT] charger_unplugged Firestore update error:', err.message);
+      }
+    }
+  });
+
   socket.on('disconnect', () => {
     console.log('[Socket.IO] Client disconnected:', socket.id);
   });
