@@ -160,8 +160,18 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
           setSteps(prev => prev.map((s, idx) => idx === 3 ? { ...s, status: 'success' } : s));
           await new Promise(r => setTimeout(r, 500));
 
-          setResolvedStationId(stationId);
+          setResolvedStationId(finalStationId);
           setScanState('plug_in');
+
+          // Contactless update: Set station status to plug_in and assign user
+          if (db && finalStationId) {
+            updateDoc(doc(db, 'stations', finalStationId), {
+              status: 'plug_in',
+              plugInUser: user.id,
+              plugInUserName: user.name,
+              lastUpdated: Date.now()
+            }).catch(err => console.error("Firestore station plug_in update failed:", err));
+          }
         };
 
         html5QrCode.start(
