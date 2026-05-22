@@ -7,12 +7,11 @@ import {
 } from 'lucide-react';
 
 const navItems = [
-  { to: '/',        icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
-  { to: '/map',     icon: <Map size={20} />,              label: 'Stations Map' },
-  { to: '/session', icon: <Zap size={20} />,              label: 'Active Session' },
-  { to: '/schedule',icon: <Clock size={20} />,            label: 'Schedule' },
-  { to: '/bookings',icon: <Calendar size={20} />,         label: 'My Bookings' },
-  { to: '/profile', icon: <User size={20} />,             label: 'Profile' },
+  { to: '/', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
+  { to: '/map', icon: <Map size={20} />, label: 'Stations Map' },
+  { to: '/schedule', icon: <Clock size={20} />, label: 'Schedule' },
+  { to: '/bookings', icon: <Calendar size={20} />, label: 'My Bookings' },
+  { to: '/profile', icon: <User size={20} />, label: 'Profile' },
 ];
 
 const Sidebar = ({ isOpen, closeSidebar }) => {
@@ -20,7 +19,7 @@ const Sidebar = ({ isOpen, closeSidebar }) => {
   const navigate = useNavigate();
 
   const available = stations.filter(s => s.status === 'available').length;
-  const charging  = stations.filter(s => s.status === 'charging' || s.status === 'occupied').length;
+  const charging = stations.filter(s => s.status === 'charging' || s.status === 'occupied').length;
 
   const handleLogout = async () => {
     await logout();

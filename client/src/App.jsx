@@ -10,8 +10,6 @@ import Bookings from './pages/Bookings';
 import Profile from './pages/Profile';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
-import Session from './pages/Session';
-
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated } = useAppContext();
@@ -35,7 +33,7 @@ const AdminRoute = ({ children }) => {
 const LogoutAction = () => {
   const { logout, isAuthenticated } = useAppContext();
   const navigate = useNavigate();
-  
+
   React.useEffect(() => {
     if (isAuthenticated) {
       logout();
@@ -47,11 +45,11 @@ const LogoutAction = () => {
       return () => clearTimeout(timer);
     }
   }, [logout, navigate, isAuthenticated]);
-  
+
   return (
-    <div style={{ 
-      height: '100vh', width: '100%', display: 'flex', flexDirection: 'column', 
-      alignItems: 'center', justifyContent: 'center', background: 'var(--bg-color)', gap: '1rem' 
+    <div style={{
+      height: '100vh', width: '100%', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', background: 'var(--bg-color)', gap: '1rem'
     }}>
       <RefreshCw size={32} className="animate-spin text-primary" />
       <p style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Ending session...</p>
@@ -71,17 +69,17 @@ const App = () => {
 
   if (loading) {
     return (
-      <div style={{ 
-        height: '100vh', width: '100%', display: 'flex', flexDirection: 'column', 
-        alignItems: 'center', justifyContent: 'center', background: 'var(--bg-color)', gap: '1.5rem' 
+      <div style={{
+        height: '100vh', width: '100%', display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', background: 'var(--bg-color)', gap: '1.5rem'
       }}>
-        <div style={{ 
-          width: 60, height: 60, borderRadius: '50%', border: '3px solid rgba(59,130,246,0.1)', 
-          borderTopColor: 'var(--accent-primary)', animation: 'spin 1s linear infinite' 
+        <div style={{
+          width: 60, height: 60, borderRadius: '50%', border: '3px solid rgba(59,130,246,0.1)',
+          borderTopColor: 'var(--accent-primary)', animation: 'spin 1s linear infinite'
         }} />
         <div style={{ textAlign: 'center' }}>
-           <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }} className="text-gradient">EV Hub</h2>
-           <p style={{ color: 'var(--text-secondary)', fontSize: '0.8125rem', marginTop: '0.25rem' }}>Initializing secure connection...</p>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }} className="text-gradient">EV Hub</h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.8125rem', marginTop: '0.25rem' }}>Initializing secure connection...</p>
         </div>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
@@ -117,7 +115,6 @@ const App = () => {
         <Route path="schedule" element={<Schedule />} />
         <Route path="bookings" element={<Bookings />} />
         <Route path="profile" element={<Profile />} />
-        <Route path="session" element={<Session />} />
       </Route>
       <Route path="/logout" element={<LogoutAction />} />
     </Routes>
