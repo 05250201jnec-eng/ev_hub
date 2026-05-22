@@ -482,56 +482,54 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
           padding: '2rem',
           borderRadius: '24px',
           border: '1px solid var(--accent-primary)',
-          boxShadow: '0 0 25px rgba(57,255,20,0.12)',
+          boxShadow: '0 0 30px rgba(57,255,20,0.15)',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           gap: '1.5rem',
           textAlign: 'center'
         }}>
-          <div className="animate-bounce" style={{
-            width: 70,
-            height: 70,
-            borderRadius: '50%',
-            background: 'rgba(57,255,20,0.1)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+          {/* Pulsing plug icon */}
+          <div style={{
+            width: 80, height: 80, borderRadius: '50%',
+            background: 'rgba(57,255,20,0.08)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
             color: 'var(--accent-primary)',
-            border: '2px dashed var(--accent-primary)'
+            border: '2px dashed var(--accent-primary)',
+            animation: 'plugPulse 2s ease-in-out infinite',
           }}>
-            <Plug size={32} />
+            <Plug size={36} />
           </div>
-          
+
+          <style>{`
+            @keyframes plugPulse {
+              0%, 100% { box-shadow: 0 0 0 0 rgba(57,255,20,0.4); transform: scale(1); }
+              50% { box-shadow: 0 0 0 14px rgba(57,255,20,0); transform: scale(1.05); }
+            }
+          `}</style>
+
           <div>
             <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'white', marginBottom: '0.5rem' }}>
-              Reservation Verified!
+              Reservation Verified! ✓
             </h3>
-            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', lineHeight: '1.4' }}>
-              Unlock complete! Please connect the physical charging cable to your car to begin.
+            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', lineHeight: '1.6' }}>
+              Unlock complete! Please connect the physical charging gun to your vehicle.
             </p>
           </div>
 
-          <button 
-            onClick={() => {
-              onScanSuccess(resolvedStationId);
-              handleClose();
-            }}
-            className="btn btn-primary hover-scale"
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem',
-              fontWeight: 700,
-              boxShadow: '0 0 20px rgba(57,255,20,0.3)',
-              fontSize: '0.875rem'
-            }}
-          >
-            <Zap size={16} /> Plug In Charger Cable 🔌
-          </button>
+          {/* IoT waiting indicator */}
+          <div style={{
+            width: '100%', padding: '0.875rem 1rem',
+            borderRadius: 12,
+            background: 'rgba(57,255,20,0.05)',
+            border: '1px solid rgba(57,255,20,0.15)',
+            display: 'flex', alignItems: 'center', gap: '0.75rem',
+          }}>
+            <RefreshCw size={16} color="var(--accent-primary)" style={{ animation: 'spin 2s linear infinite', flexShrink: 0 }} />
+            <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', textAlign: 'left', lineHeight: 1.4 }}>
+              Waiting for physical connection… Session will start automatically once the gun is plugged in.
+            </span>
+          </div>
         </div>
       )}
 
