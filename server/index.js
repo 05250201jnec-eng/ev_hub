@@ -258,13 +258,19 @@ setInterval(() => {
              io.emit('charging_completed', { 
                stationId: state.id, 
                userId: state.userId, 
-               message: 'Your car is fully charged (100%). Session completed.' 
+               message: 'Your car is fully charged (100%). Please unplug within 5 minutes to avoid idle fees.' 
              });
              
              log(state.id, 'Notification', { message: 'Car reached 100% charge' });
-             console.log(`[Simulator] ${state.id} reached 100% charge. Auto-stopping session immediately.`);
+             console.log(`[Simulator] ${state.id} reached 100% charge.`);
+         }
+         
+         // If 5 minutes have passed since reaching 100%
+         if (now - state.reached100Time >= 5 * 60 * 1000) {
+             console.log(`[Simulator] ${state.id} auto-stopping session (5 min timeout after 100%)`);
+             log(state.id, 'Timeout', { message: 'Session auto-stopped due to 5 min idle after 100%' });
              
-             // Stop session immediately at 100% and release the station
+             // Stop session automatically if user forgot to unplug
              simulateStopTransaction(state.id);
              simulateStatusChange(state.id, 'available');
          }
