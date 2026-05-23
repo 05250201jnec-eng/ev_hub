@@ -183,6 +183,26 @@ export const AppProvider = ({ children }) => {
     return unsub;
   }, [user]);
 
+  // ── Real-time user credits (live wallet sync) ─────────────────────────────
+  // Keeps credits in sync when server deducts after IoT unplug or booking
+  useEffect(() => {
+    if (!user) return;
+    const unsub = onSnapshot(doc(db, 'users', user.id), (snap) => {
+      if (snap.exists()) {
+        const fresh = snap.data();
+        if (fresh.credits !== undefined) {
+          setUser(prev => {
+            if (!prev || prev.credits === fresh.credits) return prev;
+            const updated = { ...prev, credits: fresh.credits };
+            localStorage.setItem('ev_user', JSON.stringify(updated));
+            return updated;
+          });
+        }
+      }
+    }, (err) => console.warn('[UserCredits] listener error:', err.message));
+    return unsub;
+  }, [user?.id]);
+
   // ── Online users count ───────────────────────────────────────────────────────
   useEffect(() => {
     const q = query(collection(db, 'users'), where('status', '==', 'online'));
