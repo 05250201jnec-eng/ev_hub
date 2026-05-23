@@ -269,12 +269,18 @@ export const AppProvider = ({ children }) => {
     setLoading(true);
     try {
       const isAdmin = email.toLowerCase().endsWith('@evhub.com');
+      const userId = isAdmin ? 'admin-1' : `user-${email.replace(/[^a-z0-9]/gi, '')}`;
+
+      // Read existing user data from Firestore to preserve credits balance
+      const existingDoc = await getDoc(doc(db, 'users', userId));
+      const existingData = existingDoc.exists() ? existingDoc.data() : {};
+
       const userData = {
-        id: isAdmin ? 'admin-1' : `user-${email.replace(/[^a-z0-9]/gi, '')}`,
-        name: email.split('@')[0],
+        id: userId,
+        name: existingData.name || email.split('@')[0],
         email,
         role: isAdmin ? 'admin' : 'user',
-        credits: 500,
+        credits: existingData.credits ?? (isAdmin ? 9999 : 1500), // preserve real balance
         status: 'online',
         lastSeen: Date.now(),
       };
@@ -422,7 +428,13 @@ export const AppProvider = ({ children }) => {
           lastUpdated: Date.now(),
         }).catch(() => {});
       }
-      addNotification(`Slot reserved for ${time} ✅`, 'success');
+      // Deduct Nu 50 reservation fee from user credits
+      const newCredits = (user.credits || 0) - 50;
+      await updateDoc(doc(db, 'users', user.id), { credits: newCredits }).catch(() => {});
+      setUser(prev => ({ ...prev, credits: newCredits }));
+      localStorage.setItem('ev_user', JSON.stringify({ ...user, credits: newCredits }));
+
+      addNotification(`Slot reserved for ${time} ✅ (Nu 50 deducted)`, 'success');
     } catch (error) {
       addNotification('Booking failed: ' + error.message, 'error');
     } finally {
@@ -564,24 +576,46 @@ export const AppProvider = ({ children }) => {
   const stopSession = async (sessionId, stationId) => {
     try {
       const energyConsumed = parseFloat((Math.random() * 20 + 5).toFixed(2));
+      const energyCost = parseFloat((energyConsumed * 15).toFixed(2)); // Nu 15 per kWh
+
       await updateDoc(doc(db, 'sessions', sessionId), {
         status: 'completed',
         endTime: new Date().toISOString(),
         energyConsumed,
+        totalCost: energyCost,
       });
+
+      // Mark the linked booking as completed
+      const linked = bookings.find(b =>
+        b.stationId === stationId &&
+        b.userId === user?.id &&
+        ['active', 'confirmed', 'pending'].includes(b.status)
+      );
+      if (linked) {
+        await updateDoc(doc(db, 'bookings', linked.id), {
+          status: 'completed', updatedAt: Date.now()
+        }).catch(() => {});
+      }
+
       await updateDoc(doc(db, 'stations', stationId), {
         status: 'available', lastUpdated: Date.now(),
       }).catch(() => {});
+
+      // Deduct energy cost from credits
+      const newCredits = Math.max(0, (user?.credits || 0) - energyCost);
+      await updateDoc(doc(db, 'users', user.id), { credits: newCredits }).catch(() => {});
+      setUser(prev => ({ ...prev, credits: newCredits }));
+      localStorage.setItem('ev_user', JSON.stringify({ ...user, credits: newCredits }));
 
       if (socketRef.current) {
         socketRef.current.emit('admin_override', { stationId, status: 'available' });
       }
 
-      addNotification(`Session complete — ${energyConsumed} kWh delivered ✅`, 'success');
+      addNotification(`Session complete — ${energyConsumed} kWh (Nu ${energyCost} charged) ✅`, 'success');
       
       createSystemNotification(
         'Charging Completed',
-        `${user?.name || 'User'} has finished charging at ${stations.find(s => s.id === stationId)?.name || 'Unknown'}. Total energy: ${energyConsumed} kWh.`,
+        `${user?.name || 'User'} finished charging at ${stations.find(s => s.id === stationId)?.name || 'Unknown'}. Energy: ${energyConsumed} kWh, Cost: Nu ${energyCost}.`,
         'success'
       );
     } catch (error) {
