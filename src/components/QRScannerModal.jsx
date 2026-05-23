@@ -243,126 +243,7 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
     }
   };
 
-  // Simulate scan fallback - dynamically picks the user's reserved station
-  const handleSimulateScan = () => {
-    // Reset steps
-    setSteps([
-      { label: 'Reading Station QR', status: 'pending' },
-      { label: 'Verifying User Account', status: 'pending' },
-      { label: 'Checking Active Reservations', status: 'pending' },
-      { label: 'Unlocking Charger Solenoid', status: 'pending' }
-    ]);
-    
-    // Simulate reading 'universal' QR code
-    isCameraActive.current = false;
 
-    const startVerification = () => {
-      setScanState('verifying');
-
-      const runVerification = async () => {
-        // Step 1
-        setSteps(prev => prev.map((s, idx) => idx === 0 ? { ...s, status: 'success' } : s));
-        setCurrentStep(1);
-        await new Promise(r => setTimeout(r, 600));
-
-        // Step 2
-        if (!user) {
-          setSteps(prev => prev.map((s, idx) => idx === 1 ? { ...s, status: 'failed' } : s));
-          setScanState('failed');
-          setErrorMessage('No authenticated user found.');
-          return;
-        }
-        setSteps(prev => prev.map((s, idx) => idx === 1 ? { ...s, status: 'success' } : s));
-        setCurrentStep(2);
-        await new Promise(r => setTimeout(r, 600));
-
-        // Step 3: Check Reservation
-        const now = new Date();
-        const utcToday = now.toISOString().split('T')[0];
-        const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-        const todayStrings = [utcToday, localToday];
-
-        const convert12to24 = (timeStr) => {
-          if (!timeStr) return -1;
-          const [time, modifier] = timeStr.split(' ');
-          let [hours] = time.split(':').map(Number);
-          if (hours === 12) hours = 0;
-          if (modifier === 'PM') hours += 12;
-          return hours;
-        };
-        const currentHour = now.getHours();
-
-        const todayBookings = bookings.filter(b => 
-          b.userId === user.id &&
-          (todayStrings.includes(b.date) || !b.date) &&
-          ['pending', 'confirmed'].includes(b.status)
-        );
-
-        if (todayBookings.length === 0) {
-          setSteps(prev => prev.map((s, idx) => idx === 2 ? { ...s, status: 'failed' } : s));
-          setScanState('failed');
-          setErrorMessage('You must reserve a station first to scan!');
-          addNotification('You must reserve a station first to scan!', 'error');
-          
-          setTimeout(() => {
-            handleClose();
-          }, 2500);
-          return;
-        }
-
-        const activeBooking = todayBookings.find(b => convert12to24(b.time) === currentHour);
-
-        if (!activeBooking) {
-          const nextBooking = todayBookings[0];
-          setSteps(prev => prev.map((s, idx) => idx === 2 ? { ...s, status: 'failed' } : s));
-          setScanState('failed');
-          setErrorMessage(`Time mismatch! Your reservation is for ${nextBooking.time}. Please scan during your reserved hour.`);
-          addNotification(`Reservation time mismatch (reserved: ${nextBooking.time})`, 'error');
-          
-          setTimeout(() => {
-            handleClose();
-          }, 3000);
-          return;
-        }
-
-        setSteps(prev => prev.map((s, idx) => idx === 2 ? { ...s, status: 'success' } : s));
-        setCurrentStep(3);
-        await new Promise(r => setTimeout(r, 600));
-
-        // Step 4
-        setSteps(prev => prev.map((s, idx) => idx === 3 ? { ...s, status: 'success' } : s));
-        await new Promise(r => setTimeout(r, 500));
-
-        // Resolve the real station ID (never use 'universal' for IoT matching)
-        const realStationId = activeBooking.stationId;
-        setResolvedStationId(realStationId);
-        setScanState('plug_in');
-
-        // Contactless update: tell Firestore this user is waiting to plug in at this station
-        if (db && realStationId) {
-          updateDoc(doc(db, 'stations', realStationId), {
-            status: 'plug_in',
-            plugInUser: user.id,
-            plugInUserName: user.name,
-            lastUpdated: Date.now()
-          }).catch(err => console.error("Firestore station plug_in update failed:", err));
-        }
-      };
-
-      runVerification();
-    };
-
-    if (scannerRef.current) {
-      scannerRef.current.stop()
-        .then(() => startVerification())
-        .catch(err => {
-          console.warn("Simulate stop catch:", err);
-          startVerification();
-        });
-    } else {
-      startVerification();
-    }
-  };
 
   return (
     <div style={{
@@ -535,15 +416,8 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
 
       {scanState === 'scanning' && (
         <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'center' }}>
-          <button 
-            onClick={handleSimulateScan}
-            className="btn btn-primary hover-scale"
-            style={{ padding: '0.75rem 1.5rem', gap: '0.5rem', fontSize: '0.9rem' }}
-          >
-            <QrCode size={18} /> Simulate Scan
-          </button>
           <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
-            Tip: Scan any QR containing a valid Station ID or use Simulation
+            Tip: Scan a Station QR or the Universal QR Code (ev-hub-universal)
           </span>
         </div>
       )}
