@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EV Hub – Station QR Codes</title>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green: #39ff14;
+      --green-dim: #1aff0077;
+      --bg: #050d1a;
+      --card-bg: #0d1a2e;
+      --border: rgba(57,255,20,0.18);
+      --text: #e2e8f0;
+      --subtext: #94a3b8;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem 1rem 4rem;
+    }
+
+    /* ─── Header ─────────────────────────────────── */
+    .header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+    .header .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(57,255,20,0.08);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.35rem 1rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--green);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+    .header h1 {
+      font-size: clamp(1.8rem, 5vw, 3rem);
+      font-weight: 900;
+      background: linear-gradient(135deg, #fff 30%, var(--green));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1.15;
+      margin-bottom: 0.75rem;
+    }
+    .header p {
+      color: var(--subtext);
+      font-size: 0.95rem;
+      max-width: 520px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+
+    /* ─── Grid ───────────────────────────────────── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.5rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* ─── Card ───────────────────────────────────── */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 1.75rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.25rem;
+      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+      cursor: default;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 0 32px rgba(57,255,20,0.12);
+      border-color: rgba(57,255,20,0.4);
+    }
+
+    .station-id {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--green);
+      background: rgba(57,255,20,0.08);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.25rem 0.75rem;
+    }
+
+    /* QR wrapper */
+    .qr-wrap {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 0 4px rgba(57,255,20,0.15), 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .qr-wrap canvas {
+      display: block;
+      border-radius: 4px;
+    }
+
+    .station-name {
+      font-size: 0.95rem;
+      font-weight: 700;
+      text-align: center;
+      color: var(--text);
+      line-height: 1.4;
+    }
+    .station-addr {
+      font-size: 0.78rem;
+      color: var(--subtext);
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    /* Print button */
+    .print-btn {
+      display: block;
+      margin: 2.5rem auto 0;
+      padding: 0.9rem 2.5rem;
+      background: linear-gradient(135deg, #39ff14, #00cc44);
+      color: #050d1a;
+      font-size: 0.95rem;
+      font-weight: 800;
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      box-shadow: 0 0 24px rgba(57,255,20,0.4);
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .print-btn:hover { opacity: 0.9; transform: scale(1.04); }
+
+    /* ─── Print styles ───────────────────────────── */
+    @media print {
+      body { background: #fff; color: #000; padding: 0; }
+      .header p, .print-btn { display: none; }
+      .header h1 { color: #000; -webkit-text-fill-color: #000; }
+      .badge { color: #000; border-color: #ccc; background: #f5f5f5; }
+      .grid { gap: 1rem; }
+      .card {
+        background: #fff;
+        border: 1px solid #ddd;
+        break-inside: avoid;
+        page-break-inside: avoid;
+        box-shadow: none !important;
+        transform: none !important;
+      }
+      .station-id { color: #2d7d32; background: #e8f5e9; border-color: #a5d6a7; }
+      .station-name { color: #111; }
+      .station-addr { color: #555; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="badge">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M3 11h8V3H3zm2-6h4v4H5zM3 21h8v-8H3zm2-6h4v4H5zM13 3v8h8V3zm6 6h-4V5h4zM21 21h-2v-2h2zm-4 0h-2v-2h2zm0-4h-2v-2h2zm-4 0h-2v-2h2zm0 4h-2v-2h2zm4-8h-2v-2h2zm0 4h-2v-2h2zm-4 0h-2v-2h2z"/></svg>
+    EV Hub Bhutan – Official QR Codes
+  </div>
+  <h1>Scan to Charge</h1>
+  <p>Each QR code is unique to its station. Open the EV Hub app, tap <strong>Scan QR</strong>, and point your camera at the code below to unlock the charger.</p>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<button class="print-btn" onclick="window.print()">🖨️ Print All QR Codes</button>
+
+<script>
+  const STATIONS = [
+    { id: "st-001", name: "Thimphu City Center Charging Hub",    addr: "Norzin Lam, Thimphu" },
+    { id: "st-002", name: "Paro Airport EV Hub",                 addr: "Paro International Airport" },
+    { id: "st-003", name: "Punakha Dzong Eco Charger",           addr: "Punakha Dzong Parking" },
+    { id: "st-004", name: "Phuentsholing Border Charger",        addr: "Phuentsholing Main Gate" },
+    { id: "st-005", name: "Bumthang Valley Charging",            addr: "Jakar Town, Bumthang" },
+    { id: "st-006", name: "Wangdue Phodrang Station",            addr: "Wangdue Main Road" },
+    { id: "st-007", name: "Trongsa Dzong Hub",                   addr: "Trongsa Dzong Parking" },
+    { id: "st-008", name: "Mongar Town Station",                  addr: "Mongar Main Market" },
+    { id: "st-009", name: "Trashigang District Hub",             addr: "Trashigang Town Center" },
+    { id: "st-010", name: "Samdrup Jongkhar Center",             addr: "S/Jongkhar Bus Terminal" },
+    { id: "st-011", name: "Gelephu City Hub",                    addr: "Gelephu Main Plaza" },
+    { id: "st-012", name: "Haa Valley Charging",                 addr: "Haa Town Square" },
+    { id: "st-013", name: "Samtse Border Hub",                   addr: "Samtse Main Gate" },
+    { id: "st-014", name: "Solar EV Charging",                   addr: "JNEC Campus, Dewathang" },
+  ];
+
+  const grid = document.getElementById('grid');
+
+  STATIONS.forEach(station => {
+    // Card
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    // ID badge
+    const badge = document.createElement('span');
+    badge.className = 'station-id';
+    badge.textContent = station.id.toUpperCase();
+
+    // QR wrapper + canvas
+    const wrap = document.createElement('div');
+    wrap.className = 'qr-wrap';
+    const canvas = document.createElement('canvas');
+    wrap.appendChild(canvas);
+
+    // Name + address
+    const name = document.createElement('div');
+    name.className = 'station-name';
+    name.textContent = station.name;
+
+    const addr = document.createElement('div');
+    addr.className = 'station-addr';
+    addr.textContent = '📍 ' + station.addr;
+
+    card.appendChild(badge);
+    card.appendChild(wrap);
+    card.appendChild(name);
+    card.appendChild(addr);
+    grid.appendChild(card);
+
+    // Generate QR – encode the bare station ID so the app scanner picks it up
+    QRCode.toCanvas(canvas, station.id, {
+      width: 200,
+      margin: 1,
+      color: { dark: '#050d1a', light: '#ffffff' },
+      errorCorrectionLevel: 'H'
+    }, err => {
+      if (err) console.error('QR error for', station.id, err);
+    });
+  });
+</script>
+</body>
+</html>
