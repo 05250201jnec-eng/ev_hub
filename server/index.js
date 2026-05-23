@@ -284,8 +284,8 @@ function startSimulator() {
         simulateHeartbeat(station.id);
       }, 30000);
 
-      // Kick off the state machine
-      runSimulationCycle(station.id);
+      // Automatic state cycling is replaced by the global setInterval
+
     }, Math.random() * 5000);
   });
 
