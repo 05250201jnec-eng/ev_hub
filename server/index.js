@@ -202,12 +202,23 @@ function simulateStopTransaction(stationId) {
 
   // Write completed session to Firestore sessions collection
   if (db && state.sessionId) {
-    db.collection('sessions').doc(state.sessionId).update({
+    const sessionIdToUpdate = state.sessionId;
+    db.collection('sessions').doc(sessionIdToUpdate).update({
       energyConsumed: energyTotal,
       duration: Math.round(duration / 1000),
       status: 'completed',
       endTime: new Date().toISOString()
-    }).catch(() => { });
+    }).then(() => {
+      // Find the linked booking and mark it completed too
+      return db.collection('sessions').doc(sessionIdToUpdate).get();
+    }).then(docSnap => {
+      if (docSnap.exists && docSnap.data().bookingId) {
+        return db.collection('bookings').doc(docSnap.data().bookingId).update({
+          status: 'completed',
+          updatedAt: Date.now()
+        });
+      }
+    }).catch(err => console.error('[Simulator] StopTransaction DB error:', err));
   }
 
   state.sessionId = null;
@@ -247,17 +258,13 @@ setInterval(() => {
              io.emit('charging_completed', { 
                stationId: state.id, 
                userId: state.userId, 
-               message: 'Your car is fully charged (100%). Please unplug within 5 minutes to avoid idle fees.' 
+               message: 'Your car is fully charged (100%). Session completed.' 
              });
              
              log(state.id, 'Notification', { message: 'Car reached 100% charge' });
-             console.log(`[Simulator] ${state.id} reached 100% charge.`);
-         }
-         
-         // If 5 minutes have passed since reaching 100%
-         if (now - state.reached100Time >= 5 * 60 * 1000) {
-             console.log(`[Simulator] ${state.id} auto-stopping session (5 min timeout after 100%)`);
-             log(state.id, 'Timeout', { message: 'Session auto-stopped due to 5 min idle after 100%' });
+             console.log(`[Simulator] ${state.id} reached 100% charge. Auto-stopping session immediately.`);
+             
+             // Stop session immediately at 100% and release the station
              simulateStopTransaction(state.id);
              simulateStatusChange(state.id, 'available');
          }
