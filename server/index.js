@@ -167,6 +167,8 @@ function simulateStartTransaction(stationId) {
   state.sessionId = sessionId;
   state.sessionStartTime = Date.now();
   state.energyDelivered = 0;
+  state.reached100Time = null;
+  state.userId = null;
 
   log(stationId, 'StartTransaction', {
     connectorId: 1,
@@ -215,29 +217,58 @@ function simulateStopTransaction(stationId) {
   state.sessionId = null;
   state.sessionStartTime = null;
   state.energyDelivered = 0;
+  state.reached100Time = null;
+  state.userId = null;
 
   writeToFirestore(stationId, { status: 'available', activeSession: null });
   io.emit('session_stopped', { stationId, energyTotal });
 }
 
-// ─── Main Simulation Loop ─────────────────────────────────────────────────────
-const CYCLE_MS = {
-  available: 15000,   // Stay available for 15s
-  reserved: 8000,     // Reserved for 8s
-  charging: 30000,    // Charging for 30s
-};
-
-let statusIndexes = {};
-STATIONS.forEach(s => { statusIndexes[s.id] = 0; });
-
-function runSimulationCycle(stationId) {
-  // Automatic cycling DISABLED. Only manual triggers allowed.
-  console.log(`[Simulator] ${stationId} ready for manual control.`);
-}
-
-function tickStation(stationId) {
-  // Manual mode: No automatic ticking.
-}
+// Start a global simulation loop that ticks every 5 seconds to simulate charging progress
+setInterval(() => {
+  const now = Date.now();
+  Object.values(stationState).forEach(state => {
+    if (state.status === 'charging' && state.sessionId) {
+      // Simulate energy delivery (approx 0.2 to 0.5 kWh per 5 seconds)
+      state.energyDelivered += (Math.random() * 0.3 + 0.2);
+      
+      const durationSecs = (now - state.sessionStartTime) / 1000;
+      
+      // Broadcast live charging progress to clients
+      io.emit('charging_progress', {
+         stationId: state.id,
+         sessionId: state.sessionId,
+         energyDelivered: state.energyDelivered.toFixed(2),
+         duration: durationSecs
+      });
+      
+      // Auto-stop logic: simulate reaching 100% after 15 kWh or 60 seconds
+      if (state.energyDelivered >= 15 || durationSecs >= 60) {
+         if (!state.reached100Time) {
+             state.reached100Time = now;
+             
+             // Send message to user
+             io.emit('charging_completed', { 
+               stationId: state.id, 
+               userId: state.userId, 
+               message: 'Your car is fully charged (100%). Please unplug within 5 minutes to avoid idle fees.' 
+             });
+             
+             log(state.id, 'Notification', { message: 'Car reached 100% charge' });
+             console.log(`[Simulator] ${state.id} reached 100% charge.`);
+         }
+         
+         // If 5 minutes have passed since reaching 100%
+         if (now - state.reached100Time >= 5 * 60 * 1000) {
+             console.log(`[Simulator] ${state.id} auto-stopping session (5 min timeout after 100%)`);
+             log(state.id, 'Timeout', { message: 'Session auto-stopped due to 5 min idle after 100%' });
+             simulateStopTransaction(state.id);
+             simulateStatusChange(state.id, 'available');
+         }
+      }
+    }
+  });
+}, 5000);
 
 // ─── Bootstrap ────────────────────────────────────────────────────────────────
 function startSimulator() {
@@ -426,6 +457,9 @@ io.on('connection', (socket) => {
         stationState[stationId].status = 'charging';
         stationState[stationId].sessionId = sessionId;
         stationState[stationId].sessionStartTime = Date.now();
+        stationState[stationId].userId = pendingUserId;
+        stationState[stationId].energyDelivered = 0;
+        stationState[stationId].reached100Time = null;
       }
 
       io.emit('station_status_update', {
