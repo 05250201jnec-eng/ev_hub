@@ -492,6 +492,7 @@ io.on('connection', (socket) => {
 
     // Capture the sessionId before stopping the transaction
     const activeSessionId = stationState[stationId] ? stationState[stationId].sessionId : null;
+    const activeUserId    = stationState[stationId] ? stationState[stationId].userId    : null;
 
     simulateStopTransaction(stationId);
     simulateStatusChange(stationId, 'available');
@@ -502,6 +503,9 @@ io.on('connection', (socket) => {
         const sessionDoc = await db.collection('sessions').doc(activeSessionId).get();
         if (sessionDoc.exists) {
           const sessionData = sessionDoc.data();
+          const energyConsumed = sessionData.energyConsumed || parseFloat((Math.random() * 20 + 5).toFixed(2));
+          const energyCost = parseFloat((energyConsumed * 15).toFixed(2)); // Nu 15 per kWh
+
           // 2. Mark the associated booking completed
           if (sessionData.bookingId) {
             await db.collection('bookings').doc(sessionData.bookingId).update({
@@ -509,11 +513,11 @@ io.on('connection', (socket) => {
               updatedAt: Date.now()
             });
           } else {
-            // Fallback: try to find any active booking for this user and station
+            // Fallback: find any active booking for this user and station
             const activeBookings = await db.collection('bookings')
-              .where('userId', '==', sessionData.userId)
+              .where('userId', '==', sessionData.userId || activeUserId)
               .where('stationId', '==', stationId)
-              .where('status', '==', 'active')
+              .where('status', 'in', ['active', 'confirmed', 'pending'])
               .get();
             activeBookings.forEach(async (bDoc) => {
               await db.collection('bookings').doc(bDoc.id).update({
@@ -522,9 +526,26 @@ io.on('connection', (socket) => {
               });
             });
           }
+
+          // 3. Deduct energy cost from user credits
+          const userId = sessionData.userId || activeUserId;
+          if (userId) {
+            const userDoc = await db.collection('users').doc(userId).get();
+            if (userDoc.exists) {
+              const currentCredits = userDoc.data().credits || 0;
+              const newCredits = Math.max(0, currentCredits - energyCost);
+              await db.collection('users').doc(userId).update({ credits: newCredits });
+              console.log(`[IoT] Deducted Nu ${energyCost} from ${userId}. New balance: Nu ${newCredits}`);
+            }
+          }
+
+          // 4. Update session with final cost
+          await db.collection('sessions').doc(activeSessionId).update({
+            totalCost: energyCost
+          }).catch(() => {});
         }
 
-        // 3. Reset the station state
+        // 5. Reset the station state
         await db.collection('stations').doc(stationId).update({
           status: 'available',
           plugInUser: null,
@@ -545,7 +566,26 @@ io.on('connection', (socket) => {
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 4000;
+const SERVER_URL = process.env.SERVER_URL || `http://localhost:${PORT}`;
+
 httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`[Server] EV Hub OCPP Simulator running on http://localhost:${PORT}`);
   startSimulator();
+
+  // ── Keep-Alive Self-Ping (prevents Render free tier from sleeping) ──────────
+  // Pings itself every 10 minutes so the server stays warm during demo
+  setInterval(async () => {
+    try {
+      const http = require('http');
+      const https = require('https');
+      const url = SERVER_URL.startsWith('https') ? https : http;
+      url.get(`${SERVER_URL}/health`, (res) => {
+        console.log(`[KeepAlive] Self-ping OK — status: ${res.statusCode}`);
+      }).on('error', (e) => {
+        console.warn('[KeepAlive] Self-ping failed:', e.message);
+      });
+    } catch (e) {
+      console.warn('[KeepAlive] Ping error:', e.message);
+    }
+  }, 10 * 60 * 1000); // every 10 minutes
 });
