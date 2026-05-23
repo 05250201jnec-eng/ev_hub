@@ -477,25 +477,18 @@ io.on('connection', (socket) => {
     console.log(`[IoT] Physical unplug detected at station: ${stationId}`);
     log(stationId, 'IoT_Unplug', { source: 'ESP32', stationId });
 
+    // Capture the sessionId before stopping the transaction
+    const activeSessionId = stationState[stationId] ? stationState[stationId].sessionId : null;
+
     simulateStopTransaction(stationId);
     simulateStatusChange(stationId, 'available');
 
-    if (db) {
+    if (db && activeSessionId) {
       try {
-        // 1. Find the active session for this station
-        const activeSessions = await db.collection('sessions')
-          .where('stationId', '==', stationId)
-          .where('status', '==', 'active')
-          .get();
-
-        activeSessions.forEach(async (doc) => {
-          const sessionData = doc.data();
-          // Mark session completed
-          await db.collection('sessions').doc(doc.id).update({
-            status: 'completed',
-            endTime: new Date().toISOString()
-          });
-
+        // 1. Get the session we just completed
+        const sessionDoc = await db.collection('sessions').doc(activeSessionId).get();
+        if (sessionDoc.exists) {
+          const sessionData = sessionDoc.data();
           // 2. Mark the associated booking completed
           if (sessionData.bookingId) {
             await db.collection('bookings').doc(sessionData.bookingId).update({
@@ -516,7 +509,7 @@ io.on('connection', (socket) => {
               });
             });
           }
-        });
+        }
 
         // 3. Reset the station state
         await db.collection('stations').doc(stationId).update({
