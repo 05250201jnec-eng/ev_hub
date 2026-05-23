@@ -202,15 +202,11 @@ function simulateStopTransaction(stationId) {
 
   // Write completed session to Firestore sessions collection
   if (db && state.sessionId) {
-    db.collection('sessions').doc(state.sessionId).set({
-      stationId,
-      sessionId: state.sessionId,
+    db.collection('sessions').doc(state.sessionId).update({
       energyConsumed: energyTotal,
       duration: Math.round(duration / 1000),
       status: 'completed',
-      startTime: new Date(state.sessionStartTime).toISOString(),
-      endTime: new Date().toISOString(),
-      source: 'ocpp-simulator',
+      endTime: new Date().toISOString()
     }).catch(() => { });
   }
 

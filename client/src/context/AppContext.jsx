@@ -166,6 +166,17 @@ export const AppProvider = ({ children }) => {
             prev.map(s => s.id === stationId ? { ...s, status: 'available' } : s)
           );
         });
+
+        socket.on('charging_completed', ({ stationId, userId, message }) => {
+          const currentUserStr = localStorage.getItem('ev_user');
+          if (currentUserStr) {
+            const currentUser = JSON.parse(currentUserStr);
+            if (currentUser.id === userId || !userId) {
+              // Add the pop-up notification
+              addNotification(`🔋 ${message}`, 'success');
+            }
+          }
+        });
       } catch {
         setSimulatorStatus('disconnected');
       }
