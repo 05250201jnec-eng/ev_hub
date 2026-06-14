@@ -15,8 +15,8 @@
       "id": "reed",
       "top": 150,
       "left": -170,
-      "attrs": {},
-      "label": "Magnetic Reed Switch (Slide = Gun Plugged In)"
+      "attrs": { "bounce": "0" },
+      "label": "Charging Gun Switch (Slide ON = Plugged In)"
     },
     {
       "type": "wokwi-relay-module",

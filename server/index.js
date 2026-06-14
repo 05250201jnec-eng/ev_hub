@@ -402,16 +402,23 @@ io.on('connection', (socket) => {
       // 1. Read the pending user who scanned the QR code for this station
       const stationDoc = await db.collection('stations').doc(stationId).get();
       if (!stationDoc.exists) {
-        console.warn(`[IoT] Station ${stationId} not found in Firestore`);
+        console.warn(`[IoT] Station ${stationId} not found in Firestore — falling back to in-memory simulation`);
+        simulateStartTransaction(stationId);
+        simulateStatusChange(stationId, 'charging');
         return;
       }
 
       const stationData = stationDoc.data();
-      const pendingUserId = stationData.plugInUser;
-      const pendingUserName = stationData.plugInUserName;
+      let pendingUserId = stationData.plugInUser;
+      let pendingUserName = stationData.plugInUserName;
 
+      // ── FALLBACK: No pre-registered user (QR not scanned or race condition) ──
+      // Allow the physical plug to still start a guest/walk-in session so the
+      // Wokwi switch always triggers a visible charging state change.
       if (!pendingUserId) {
-        console.warn(`[IoT] No pending user at station ${stationId} — ignoring plug event`);
+        console.warn(`[IoT] No pending user at station ${stationId} — starting guest session via in-memory sim`);
+        simulateStartTransaction(stationId);
+        simulateStatusChange(stationId, 'charging');
         return;
       }
 
