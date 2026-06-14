@@ -121,29 +121,41 @@ void wsEvent(WStype_t type, uint8_t* payload, size_t length) {
       break;
 
     case WStype_CONNECTED:
-      Serial.println("[WS] ✓ WebSocket connected — sending Socket.IO namespace connect");
+      // WebSocket TCP layer connected.
+      // DO NOT send "40" here yet — wait for Engine.IO OPEN packet ("0{...}")
+      // from the server before sending Socket.IO namespace connect.
+      Serial.println("[WS] ✓ WebSocket TCP connected — awaiting Engine.IO OPEN...");
       wsConnected = true;
-      // Send Socket.IO namespace connect packet
-      ws.sendTXT("40");
       break;
 
     case WStype_TEXT: {
       String msg = (char*)payload;
       Serial.printf("[WS] ← %s\n", msg.c_str());
 
-      // Socket.IO PING (2) → reply with PONG (3) to stay connected
-      if (msg == "2") {
-        ws.sendTXT("3");
-        sioPingReceived = true;
+      // ── Engine.IO OPEN packet ("0{...}") ─────────────────────────────────
+      // Server sends this first after WebSocket upgrade completes.
+      // Only now is it safe to send the Socket.IO namespace connect packet.
+      if (msg.startsWith("0") && !msg.startsWith("40") && !msg.startsWith("42")) {
+        Serial.println("[Engine.IO] ← OPEN received — sending Socket.IO namespace connect (40)");
+        ws.sendTXT("40");
         break;
       }
 
-      // Socket.IO namespace connected (40 or 40{}) → station is now AVAILABLE
+      // ── Engine.IO PING (2) → reply with PONG (3) ─────────────────────────
+      if (msg == "2") {
+        ws.sendTXT("3");
+        sioPingReceived = true;
+        Serial.println("[Engine.IO] ← PING → sent PONG");
+        break;
+      }
+
+      // ── Socket.IO namespace connected: "40" or "40{...}" ─────────────────
+      // This means the server accepted the namespace join — station is now AVAILABLE.
       if (msg.startsWith("40")) {
-        Serial.println("[Socket.IO] ✓ Namespace connected — Station AVAILABLE");
+        Serial.println("[Socket.IO] ✓ Namespace joined — Station AVAILABLE ✓");
         state = AVAILABLE;
 
-        // Flush any pending event that was queued before connection
+        // Flush any event that was queued while we were connecting
         if (pendingEvent.length() > 0) {
           Serial.printf("[IoT] Flushing queued event: %s\n", pendingEvent.c_str());
           ws.sendTXT(pendingEvent);
