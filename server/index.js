@@ -85,6 +85,7 @@ const STATUS_COLORS = {
   available: '#10b981',
   reserved: '#3b82f6',
   charging: '#f59e0b',
+  idle: '#f97316',
   offline: '#ef4444',
 };
 
@@ -344,10 +345,10 @@ app.post('/api/admin/override', async (req, res) => {
       if (battery >= 100) {
         // Battery full! Auto-complete the session
         if (stationState[stationId].status !== 'available') {
-          console.log(`[IoT] Battery 100%. Auto-stopping session for ${stationId}.`);
-          await handleChargerUnplugged(stationId);
+          console.log(`[IoT] Battery 100%. Entering Grace Period for ${stationId}.`);
+          await handleChargeCompleted(stationId);
         }
-        return res.json({ success: true, stationId, newStatus: 'available', note: 'Auto-completed at 100%' });
+        return res.json({ success: true, stationId, newStatus: 'idle', note: 'Entered Grace Period at 100%' });
       } else {
         // Normal charging: only trigger plug if not already charging
         if (stationState[stationId].status !== 'charging') {
@@ -471,34 +472,70 @@ async function handleChargerPlugged(stationId) {
   }
 }
 
+
+async function handleChargeCompleted(stationId) {
+  console.log(`[IoT] Charge 100% at ${stationId}. Entering idle state.`);
+  log(stationId, 'IoT_Complete', { source: 'Hardware', stationId });
+
+  // Do the same billing logic as unplugged, but set status to idle
+  await processSessionCompletion(stationId, 'idle');
+}
+
 async function handleChargerUnplugged(stationId) {
   console.log(`[IoT] Physical unplug detected at station: ${stationId}`);
   log(stationId, 'IoT_Unplug', { source: 'Hardware', stationId });
+  
+  const state = stationState[stationId];
+  // If it was already idle, the session was already billed. Just mark available.
+  if (state && state.status === 'idle') {
+    simulateStatusChange(stationId, 'available');
+    state.idleStartTime = null;
+    const admin = require('firebase-admin');
+    if (db) {
+       await db.collection('stations').doc(stationId).update({
+         status: 'available',
+         plugInUser: null,
+         plugInUserName: null,
+         activeSessionId: null,
+         lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+       }).catch(()=>{});
+    }
+    return;
+  }
 
-  // Capture the sessionId before stopping the transaction
+  await processSessionCompletion(stationId, 'available');
+}
+
+async function processSessionCompletion(stationId, finalStatus) {
   const activeSessionId = stationState[stationId] ? stationState[stationId].sessionId : null;
   const activeUserId    = stationState[stationId] ? stationState[stationId].userId    : null;
 
   simulateStopTransaction(stationId);
-  simulateStatusChange(stationId, 'available');
+  simulateStatusChange(stationId, finalStatus);
+  
+  if (stationState[stationId]) {
+     if (finalStatus === 'idle') {
+        stationState[stationId].idleStartTime = Date.now();
+        stationState[stationId].userId = activeUserId; // keep user linked for idle fees
+     } else {
+        stationState[stationId].idleStartTime = null;
+     }
+  }
 
   if (db && activeSessionId) {
     try {
-      // 1. Get the session we just completed
       const sessionDoc = await db.collection('sessions').doc(activeSessionId).get();
       if (sessionDoc.exists) {
         const sessionData = sessionDoc.data();
         const energyConsumed = sessionData.energyConsumed || parseFloat((Math.random() * 20 + 5).toFixed(2));
-        const energyCost = parseFloat((energyConsumed * 15).toFixed(2)); // Nu 15 per kWh
+        const energyCost = parseFloat((energyConsumed * 15).toFixed(2)); 
 
-        // 2. Mark the associated booking completed
         if (sessionData.bookingId) {
           await db.collection('bookings').doc(sessionData.bookingId).update({
             status: 'completed',
             updatedAt: Date.now()
           });
         } else {
-          // Fallback: find any active booking for this user and station
           const activeBookings = await db.collection('bookings')
             .where('userId', '==', sessionData.userId || activeUserId)
             .where('stationId', '==', stationId)
@@ -512,7 +549,6 @@ async function handleChargerUnplugged(stationId) {
           });
         }
 
-        // 3. Deduct energy cost from user credits
         const userId = sessionData.userId || activeUserId;
         if (userId) {
           const userDoc = await db.collection('users').doc(userId).get();
@@ -524,22 +560,20 @@ async function handleChargerUnplugged(stationId) {
           }
         }
 
-        // 4. Update session with final cost
         await db.collection('sessions').doc(activeSessionId).update({
           totalCost: energyCost
         }).catch(() => {});
       }
 
-      // 5. Reset the station state
+      const admin = require('firebase-admin');
       await db.collection('stations').doc(stationId).update({
-        status: 'available',
-        plugInUser: null,
-        plugInUserName: null,
+        status: finalStatus,
+        plugInUser: finalStatus === 'idle' ? activeUserId : null,
         activeSessionId: null,
         lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
       });
     } catch (err) {
-      console.error('[IoT] charger_unplugged Firestore update error:', err.message);
+      console.error('[IoT] processSessionCompletion Firestore update error:', err.message);
     }
   }
 }
@@ -610,6 +644,36 @@ const SERVER_URL = process.env.SERVER_URL || `http://localhost:${PORT}`;
 httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`[Server] EV Hub OCPP Simulator running on http://localhost:${PORT}`);
   startSimulator();
+
+  
+  // ── Idle Fee Monitor (Demo: 30s Grace Period) ──────────
+  setInterval(async () => {
+    const now = Date.now();
+    for (const stationId in stationState) {
+      const state = stationState[stationId];
+      if (state.status === 'idle' && state.idleStartTime) {
+        const GRACE_PERIOD_MS = 30000; // 30 seconds for demo!
+        if (now - state.idleStartTime > GRACE_PERIOD_MS) {
+          // Charge idle fee! 5 Nu per tick
+          const userId = state.userId;
+          if (userId && db) {
+            try {
+              const userDoc = await db.collection('users').doc(userId).get();
+              if (userDoc.exists) {
+                const currentCredits = userDoc.data().credits || 0;
+                const newCredits = Math.max(0, currentCredits - 5);
+                await db.collection('users').doc(userId).update({ credits: newCredits });
+                console.log(`[IdleFee] Charged Nu 5 to ${userId} for station ${stationId}. New balance: Nu ${newCredits}`);
+              }
+            } catch(e) { console.error('Idle fee error', e); }
+          }
+          // Reset the timer so it charges again in 30 seconds
+          state.idleStartTime = now;
+        }
+      }
+    }
+  }, 5000); // Check every 5 seconds
+
 
   // ── Keep-Alive Self-Ping (prevents Render free tier from sleeping) ──────────
   // Pings itself every 10 minutes so the server stays warm during demo
