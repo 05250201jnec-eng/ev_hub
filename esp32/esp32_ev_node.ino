@@ -1,276 +1,240 @@
 /*
- * EV Hub – IoT Charging Node Firmware
- * =====================================
+ * EV Hub – IoT Charging Node Firmware (HTTP + OLED Edition)
+ * ===========================================================
  * Board    : ESP32 DevKit V1
- * Protocol : Raw WebSocket + Socket.IO message format (no SocketIoClient lib needed)
+ * Protocol : HTTP POST to Render server (permanent URL — no Pinggy needed)
  *
- * Physical / Wokwi Wiring:
- *   GPIO 18 → Slide Switch (other leg to GND, uses INPUT_PULLUP)
- *              Slide ON  = LOW  = charger plugged in
- *              Slide OFF = HIGH = charger unplugged
- *   GPIO 19 → 220Ω → Green LED anode → GND   (Station available)
- *   GPIO 21 → 220Ω → Red LED anode   → GND   (Charging active)
- *   GPIO 23 → Relay module IN  (optional)
+ * Wokwi Wiring:
+ *   GPIO 15 → Slide Switch (other leg to GND, INPUT_PULLUP)
+ *             Slide ON  = LOW  = charger plugged in
+ *             Slide OFF = HIGH = charger unplugged
+ *   GPIO  2 → Red LED anode → 220Ω → GND  (Charging indicator)
+ *   GPIO 32 → Potentiometer middle pin      (Battery % simulation)
+ *   GPIO 21 → OLED SDA
+ *   GPIO 22 → OLED SCL
  *
- * Libraries needed (only 2!):
- *   - ArduinoJson  by Benoit Blanchon (v6.x)
- *   - WebSockets   by Markus Sattler
+ * Libraries needed:
+ *   - Adafruit GFX Library
+ *   - Adafruit SSD1306
  */
 
 #include <WiFi.h>
-#include <ArduinoJson.h>
-#include <WebSocketsClient.h>
+#include <HTTPClient.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
 
-// ── Wi-Fi Credentials ─────────────────────────────────────────────────────────
-const char* WIFI_SSID     = "Wokwi-GUEST";
-const char* WIFI_PASSWORD = "";
+// ── OLED Display ──────────────────────────────────────────────────────────────
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET    -1
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-// ── Server ────────────────────────────────────────────────────────────────────
-const char* SERVER_HOST = "ev-hub-fhid.onrender.com";
-const int   SERVER_PORT = 443;
-const char* SERVER_PATH = "/socket.io/?EIO=4&transport=websocket";
+// ── Wi-Fi ─────────────────────────────────────────────────────────────────────
+const char* ssid     = "Wokwi-GUEST";
+const char* password = "";
+
+// ── Server — PERMANENT Render URL (no Pinggy, never expires) ─────────────────
+//    ▼ This is the only URL you ever need. Do NOT change this to a Pinggy link.
+const char* SERVER_URL = "https://ev-hub-fhid.onrender.com/api/admin/override";
 
 // ── Station Identity ──────────────────────────────────────────────────────────
-const char* STATION_ID = "st-014";   // JNEC Solar Charging Hub
+const char* STATION_ID   = "st-014";          // JNEC Solar Charging Hub
+const char* STATION_NAME = "JNEC Solar Hub";  // Shown on OLED
 
 // ── Pin Definitions ───────────────────────────────────────────────────────────
-#define PIN_REED    18
-#define PIN_LED_G   19
-#define PIN_LED_R   21
-#define PIN_RELAY   23
+const int SWITCH_PIN = 15;   // Slide switch → GND (INPUT_PULLUP)
+const int LED_PIN    = 2;    // Red LED (charging indicator)
+const int POT_PIN    = 32;   // Potentiometer (battery % sim)
 
-// ── State Machine ─────────────────────────────────────────────────────────────
-enum State { OFFLINE, AVAILABLE, CHARGING };
-State state = OFFLINE;
+// ── State Tracking ────────────────────────────────────────────────────────────
+bool lastSwitchState   = false;
+int  lastBatteryPct    = -1;
+bool lastOledState     = false;
+int  lastOledBattery   = -1;
 
-bool     pluggedIn       = false;
-bool     lastSwitch      = HIGH;
-unsigned long lastDebounce = 0;
-const unsigned long DEBOUNCE_MS = 80;
+// Rate-limit server calls: send immediately on switch flip,
+// then max once every 5 seconds for battery dial changes
+unsigned long lastServerUpdate = 0;
+const unsigned long SERVER_UPDATE_MS = 5000;
 
-unsigned long lastBlink = 0;
-bool blinkOn = false;
-
-// ── Pending event queue (fires when WS connects) ──────────────────────────────
-// If the switch is flipped before WS is connected, we queue the event
-// and send it as soon as the connection is established.
-String pendingEvent = "";   // "" = no pending event
-
-// ── WebSocket client ──────────────────────────────────────────────────────────
-WebSocketsClient ws;
-bool wsConnected     = false;
-bool sioPingReceived = false;
-
-// ── Emit a Socket.IO event ────────────────────────────────────────────────────
-// Socket.IO over raw WS format: 42["event_name", {"key": "value"}]
-// Returns true if sent, false if not connected (queues for later).
-bool emitEvent(const char* eventName, const char* stationId) {
-  String msg = "42[\"";
-  msg += eventName;
-  msg += "\",{\"stationId\":\"";
-  msg += stationId;
-  msg += "\"}]";
-
-  if (!wsConnected) {
-    Serial.printf("[IoT] WS not connected yet — queuing event: %s\n", eventName);
-    pendingEvent = msg;   // Overwrite with latest intent
-    return false;
+// ── OLED Helper ───────────────────────────────────────────────────────────────
+void oledMsg(const char* line1, const char* line2 = "") {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(10, 20);
+  display.println(line1);
+  if (strlen(line2) > 0) {
+    display.setCursor(10, 36);
+    display.println(line2);
   }
-
-  ws.sendTXT(msg);
-  Serial.printf("[IoT] Emitted: %s\n", msg.c_str());
-  return true;
+  display.display();
 }
 
-// ── LED / Relay control ───────────────────────────────────────────────────────
-void setHardwareState() {
-  unsigned long now = millis();
-  switch (state) {
-    case OFFLINE:
-      digitalWrite(PIN_RELAY, LOW);
-      digitalWrite(PIN_LED_G, LOW);
-      if (now - lastBlink > 800) {      // Fast red blink = offline
-        lastBlink = now;
-        blinkOn = !blinkOn;
-        digitalWrite(PIN_LED_R, blinkOn ? HIGH : LOW);
-      }
-      break;
-
-    case AVAILABLE:
-      digitalWrite(PIN_RELAY, LOW);
-      digitalWrite(PIN_LED_G, HIGH);     // Solid green
-      digitalWrite(PIN_LED_R, LOW);
-      break;
-
-    case CHARGING:
-      digitalWrite(PIN_RELAY, HIGH);     // Relay ON
-      digitalWrite(PIN_LED_G, LOW);
-      digitalWrite(PIN_LED_R, HIGH);     // Solid red
-      break;
+// ── Send HTTP POST to Render ──────────────────────────────────────────────────
+void sendStatusUpdate(String status, int batteryPct) {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("[HTTP] Wi-Fi not connected — skipping");
+    return;
   }
+
+  HTTPClient http;
+  http.begin(SERVER_URL);
+  http.addHeader("Content-Type", "application/json");
+  http.setTimeout(8000);   // 8s timeout — Render may be waking from sleep
+
+  // Build JSON payload
+  String payload = "{\"stationId\":\"";
+  payload += STATION_ID;
+  payload += "\",\"status\":\"";
+  payload += status;
+  payload += "\",\"battery\":";
+  payload += String(batteryPct);
+  payload += "}";
+
+  Serial.print("[HTTP] POST → ");
+  Serial.println(payload);
+
+  int code = http.POST(payload);
+
+  if (code > 0) {
+    Serial.printf("[HTTP] Response %d: %s\n", code, http.getString().c_str());
+  } else {
+    // Common causes: Render cold-start (wait 30-60s), or network issue
+    Serial.printf("[HTTP] Error %d — Render may be waking up, retrying next cycle\n", code);
+  }
+
+  http.end();
 }
 
-// ── WebSocket event handler ───────────────────────────────────────────────────
-void wsEvent(WStype_t type, uint8_t* payload, size_t length) {
-  switch (type) {
+// ── OLED Status Screen ────────────────────────────────────────────────────────
+void updateOLED(bool isCharging, int batteryPct) {
+  display.clearDisplay();
+  display.drawRect(0, 0, 128, 64, SSD1306_WHITE);
 
-    case WStype_DISCONNECTED:
-      Serial.println("[WS] ✗ Disconnected from server");
-      wsConnected = false;
-      state = OFFLINE;
-      break;
+  if (!isCharging) {
+    // ── Available screen ──
+    display.setTextSize(1);
+    display.setCursor(8, 6);
+    display.print("=== EV STATION ===");
 
-    case WStype_CONNECTED:
-      // WebSocket TCP layer connected.
-      // DO NOT send "40" here yet — wait for Engine.IO OPEN packet ("0{...}")
-      // from the server before sending Socket.IO namespace connect.
-      Serial.println("[WS] ✓ WebSocket TCP connected — awaiting Engine.IO OPEN...");
-      wsConnected = true;
-      break;
+    display.setCursor(15, 20);
+    display.print(STATION_NAME);
 
-    case WStype_TEXT: {
-      String msg = (char*)payload;
-      Serial.printf("[WS] ← %s\n", msg.c_str());
+    display.setCursor(20, 34);
+    display.print("Status:  FREE");
 
-      // ── Engine.IO OPEN packet ("0{...}") ─────────────────────────────────
-      // Server sends this first after WebSocket upgrade completes.
-      // Only now is it safe to send the Socket.IO namespace connect packet.
-      if (msg.startsWith("0") && !msg.startsWith("40") && !msg.startsWith("42")) {
-        Serial.println("[Engine.IO] ← OPEN received — sending Socket.IO namespace connect (40)");
-        ws.sendTXT("40");
-        break;
-      }
+    display.setCursor(10, 50);
+    display.print("Slide switch to charge");
+  } else {
+    // ── Charging screen ──
+    display.setTextSize(1);
+    display.setCursor(20, 6);
+    display.print("CHARGING VEHICLE");
 
-      // ── Engine.IO PING (2) → reply with PONG (3) ─────────────────────────
-      if (msg == "2") {
-        ws.sendTXT("3");
-        sioPingReceived = true;
-        Serial.println("[Engine.IO] ← PING → sent PONG");
-        break;
-      }
+    // Big battery % number
+    display.setTextSize(2);
+    display.setCursor(15, 20);
+    display.print(batteryPct);
+    display.print("%");
 
-      // ── Socket.IO namespace connected: "40" or "40{...}" ─────────────────
-      // This means the server accepted the namespace join — station is now AVAILABLE.
-      if (msg.startsWith("40")) {
-        Serial.println("[Socket.IO] ✓ Namespace joined — Station AVAILABLE ✓");
-        state = AVAILABLE;
+    // Power label
+    display.setTextSize(1);
+    display.setCursor(72, 26);
+    display.print("7.2 kW");
 
-        // Flush any event that was queued while we were connecting
-        if (pendingEvent.length() > 0) {
-          Serial.printf("[IoT] Flushing queued event: %s\n", pendingEvent.c_str());
-          ws.sendTXT(pendingEvent);
-          pendingEvent = "";
-        }
-        break;
-      }
-
-      // Socket.IO event (42[...]) → parse and sync state
-      if (msg.startsWith("42")) {
-        String json = msg.substring(2);   // strip the "42" prefix
-        DynamicJsonDocument doc(512);
-        if (deserializeJson(doc, json) != DeserializationError::Ok) break;
-
-        const char* eventName = doc[0];
-        if (!eventName) break;
-
-        if (strcmp(eventName, "station_status_update") == 0) {
-          const char* sid = doc[1]["stationId"];
-          const char* sts = doc[1]["status"];
-          if (sid && strcmp(sid, STATION_ID) == 0 && sts) {
-            Serial.printf("[IoT] Station status synced → %s\n", sts);
-            if      (strcmp(sts, "available") == 0) state = AVAILABLE;
-            else if (strcmp(sts, "charging")  == 0) state = CHARGING;
-            else                                    state = OFFLINE;
-          }
-        }
-      }
-      break;
-    }
-
-    default:
-      break;
+    // Progress bar
+    display.drawRect(10, 46, 108, 12, SSD1306_WHITE);
+    int barWidth = map(batteryPct, 0, 100, 0, 104);
+    display.fillRect(12, 48, barWidth, 8, SSD1306_WHITE);
   }
+
+  display.display();
 }
 
 // ── Setup ─────────────────────────────────────────────────────────────────────
 void setup() {
   Serial.begin(115200);
   delay(500);
-  Serial.println("\n=== EV Hub IoT Node Booting ===");
+  Serial.println("\n=== EV Hub IoT Node (HTTP Edition) ===");
 
-  // Init pins
-  pinMode(PIN_RELAY, OUTPUT);
-  pinMode(PIN_LED_G, OUTPUT);
-  pinMode(PIN_LED_R, OUTPUT);
-  pinMode(PIN_REED,  INPUT_PULLUP);
+  // Pin setup
+  pinMode(SWITCH_PIN, INPUT_PULLUP);
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
 
-  // Safe startup state
-  digitalWrite(PIN_RELAY, LOW);
-  digitalWrite(PIN_LED_G, LOW);
-  digitalWrite(PIN_LED_R, HIGH);   // Red on during boot
+  // I2C + OLED
+  Wire.begin(21, 22);
+  Serial.println("[OLED] Initializing...");
+  bool oledOk = display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  if (!oledOk) oledOk = display.begin(SSD1306_SWITCHCAPVCC, 0x3D);
+  if (!oledOk) Serial.println("[OLED] Not found — continuing without display");
 
-  // Connect to Wi-Fi
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.printf("[WiFi] Connecting to %s", WIFI_SSID);
+  oledMsg("EV Hub Node", "Booting...");
+
+  // Connect Wi-Fi
+  Serial.printf("[WiFi] Connecting to %s", ssid);
+  WiFi.begin(ssid, password);
   unsigned long wifiStart = millis();
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
     if (millis() - wifiStart > 15000) {
-      Serial.println("\n[WiFi] Timeout! Restarting...");
+      Serial.println("\n[WiFi] Timeout — restarting");
       ESP.restart();
     }
   }
   Serial.printf("\n[WiFi] ✓ Connected! IP: %s\n", WiFi.localIP().toString().c_str());
-  digitalWrite(PIN_LED_R, LOW);   // Turn off boot indicator
 
-  // Connect WebSocket to backend
-  // setInsecure() skips CA cert validation — required for Wokwi simulator
-  // and works fine since Render's TLS termination is still enforced at the host level.
-  Serial.printf("[WS] Connecting to wss://%s:%d%s\n", SERVER_HOST, SERVER_PORT, SERVER_PATH);
-  ws.beginSSL(SERVER_HOST, SERVER_PORT, SERVER_PATH);
-  ws.setExtraHeaders("Origin: https://wokwi.com");   // Helps pass CORS on some servers
-  ws.onEvent(wsEvent);
-  ws.setReconnectInterval(3000);   // Retry every 3s if dropped
+  oledMsg("WiFi Connected!", STATION_NAME);
+  delay(1200);
+
+  // Show initial available screen
+  updateOLED(false, 0);
+  Serial.println("[Ready] Waiting for switch input...");
 }
 
 // ── Loop ──────────────────────────────────────────────────────────────────────
 void loop() {
-  ws.loop();
-  setHardwareState();
+  bool currentSwitch = (digitalRead(SWITCH_PIN) == LOW);
 
-  // Wi-Fi watchdog
-  if (WiFi.status() != WL_CONNECTED) {
-    state = OFFLINE;
-    Serial.println("[WiFi] Lost! Reconnecting...");
-    WiFi.reconnect();
-    delay(1000);
-    return;
-  }
+  // Read potentiometer → battery percentage
+  int potValue     = analogRead(POT_PIN);
+  int batteryPct   = map(potValue, 0, 4095, 0, 100);
 
-  // Read slide switch (wired: one end GND, other end GPIO 18 with INPUT_PULLUP)
-  // Slide ON  → pin shorts to GND → reads LOW  → charger_plugged
-  // Slide OFF → pin floats high   → reads HIGH → charger_unplugged
-  int reading = digitalRead(PIN_REED);
-  if (reading != lastSwitch) {
-    lastDebounce = millis();
-  }
+  unsigned long now      = millis();
+  bool switchChanged     = (currentSwitch != lastSwitchState);
+  bool batteryChanged    = (abs(batteryPct - lastBatteryPct) >= 2); // ignore < 2% noise
 
-  if ((millis() - lastDebounce) > DEBOUNCE_MS) {
-    // LOW = switch closed = gun plugged in
-    if (reading == LOW && !pluggedIn) {
-      pluggedIn = true;
-      Serial.println("[Switch] ▼ PLUGGED IN — emitting charger_plugged");
-      emitEvent("charger_plugged", STATION_ID);
-      state = CHARGING;
-    }
-    // HIGH = switch open = gun unplugged
-    else if (reading == HIGH && pluggedIn) {
-      pluggedIn = false;
-      Serial.println("[Switch] ▲ UNPLUGGED — emitting charger_unplugged");
-      emitEvent("charger_unplugged", STATION_ID);
-      state = AVAILABLE;
+  // ── Server update ─────────────────────────────────────────────────────────
+  // Send immediately on switch flip, or throttled every 5s for battery changes
+  bool shouldPost = switchChanged ||
+                    (batteryChanged && currentSwitch &&
+                     (now - lastServerUpdate >= SERVER_UPDATE_MS));
+
+  if (shouldPost) {
+    lastSwitchState  = currentSwitch;
+    lastBatteryPct   = batteryPct;
+    lastServerUpdate = now;
+
+    if (currentSwitch) {
+      digitalWrite(LED_PIN, HIGH);
+      Serial.println("[Switch] ON → Charging");
+      sendStatusUpdate("charging", batteryPct);
+    } else {
+      digitalWrite(LED_PIN, LOW);
+      Serial.println("[Switch] OFF → Available");
+      sendStatusUpdate("available", batteryPct);
     }
   }
-  lastSwitch = reading;
+
+  // ── OLED update (instant — no rate limiting) ──────────────────────────────
+  if (currentSwitch != lastOledState || batteryPct != lastOledBattery) {
+    lastOledState   = currentSwitch;
+    lastOledBattery = batteryPct;
+    updateOLED(currentSwitch, batteryPct);
+  }
+
+  delay(100);
 }

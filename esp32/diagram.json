@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "author": "EV Hub IoT Node",
+  "author": "EV Hub",
   "editor": "wokwi",
   "parts": [
     {
@@ -12,64 +12,59 @@
     },
     {
       "type": "wokwi-slide-switch",
-      "id": "reed",
-      "top": 150,
-      "left": -170,
+      "id": "switch1",
+      "top": 100,
+      "left": -150,
       "attrs": { "bounce": "0" },
-      "label": "Charging Gun Switch (Slide ON = Plugged In)"
-    },
-    {
-      "type": "wokwi-relay-module",
-      "id": "relay",
-      "top": -130,
-      "left": 200,
-      "attrs": {}
-    },
-    {
-      "type": "wokwi-resistor",
-      "id": "r_green",
-      "top": 60,
-      "left": 200,
-      "attrs": { "value": "220" },
-      "rotate": 90
-    },
-    {
-      "type": "wokwi-led",
-      "id": "led_green",
-      "top": 60,
-      "left": 260,
-      "attrs": { "color": "green" },
-      "label": "Available"
-    },
-    {
-      "type": "wokwi-resistor",
-      "id": "r_red",
-      "top": 110,
-      "left": 200,
-      "attrs": { "value": "220" },
-      "rotate": 90
+      "label": "Plug/Unplug"
     },
     {
       "type": "wokwi-led",
       "id": "led_red",
-      "top": 110,
-      "left": 260,
+      "top": 50,
+      "left": 150,
       "attrs": { "color": "red" },
       "label": "Charging"
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r_red",
+      "top": 100,
+      "left": 150,
+      "attrs": { "value": "220" },
+      "rotate": 90
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "pot1",
+      "top": -50,
+      "left": 250,
+      "attrs": {}
+    },
+    {
+      "type": "board-ssd1306",
+      "id": "oled1",
+      "top": -150,
+      "left": 100,
+      "attrs": {}
     }
   ],
   "connections": [
-    [ "esp32:GND.1",  "reed:1",        "black",  [] ],
-    [ "esp32:18",     "reed:2",        "green",  [] ],
-    [ "esp32:23",     "relay:IN",      "blue",   [] ],
-    [ "esp32:5V",     "relay:VCC",     "red",    [] ],
-    [ "esp32:GND.2",  "relay:GND",     "black",  [] ],
-    [ "esp32:19",     "r_green:1",     "gold",   [] ],
-    [ "r_green:2",    "led_green:A",   "gold",   [] ],
-    [ "led_green:C",  "esp32:GND.3",   "black",  [] ],
-    [ "esp32:21",     "r_red:1",       "orange", [] ],
-    [ "r_red:2",      "led_red:A",     "orange", [] ],
-    [ "led_red:C",    "esp32:GND.3",   "black",  [] ]
+    [ "esp32:GND.1", "switch1:1", "black", [] ],
+    [ "esp32:15", "switch1:2", "green", [] ],
+    
+    [ "esp32:2", "r_red:1", "red", [] ],
+    [ "r_red:2", "led_red:A", "red", [] ],
+    [ "led_red:C", "esp32:GND.2", "black", [] ],
+    
+    [ "pot1:GND", "esp32:GND.3", "black", [] ],
+    [ "pot1:VCC", "esp32:3V3", "red", [] ],
+    [ "pot1:SIG", "esp32:32", "yellow", [] ],
+    
+    [ "oled1:GND", "esp32:GND.4", "black", [] ],
+    [ "oled1:VCC", "esp32:3V3", "red", [] ],
+    [ "oled1:SDA", "esp32:21", "blue", [] ],
+    [ "oled1:SCL", "esp32:22", "cyan", [] ]
   ],
   "dependencies": {}
 }
