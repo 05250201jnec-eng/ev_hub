@@ -341,9 +341,23 @@ app.post('/api/admin/override', async (req, res) => {
   
   if (battery !== undefined) {
     if (status === 'charging') {
-      await handleChargerPlugged(stationId);
+      if (battery >= 100) {
+        // Battery full! Auto-complete the session
+        if (stationState[stationId].status !== 'available') {
+          console.log(`[IoT] Battery 100%. Auto-stopping session for ${stationId}.`);
+          await handleChargerUnplugged(stationId);
+        }
+        return res.json({ success: true, stationId, newStatus: 'available', note: 'Auto-completed at 100%' });
+      } else {
+        // Normal charging: only trigger plug if not already charging
+        if (stationState[stationId].status !== 'charging') {
+          await handleChargerPlugged(stationId);
+        }
+      }
     } else if (status === 'available') {
-      await handleChargerUnplugged(stationId);
+      if (stationState[stationId].status !== 'available') {
+        await handleChargerUnplugged(stationId);
+      }
     }
     return res.json({ success: true, stationId, newStatus: status, note: 'Triggered hardware plug flow' });
   }
