@@ -431,41 +431,52 @@ async function handleChargerPlugged(stationId) {
       .where('status', 'in', ['pending', 'confirmed'])
       .get();
 
-    if (!bookingsSnapshot.empty) {
-      const bDoc = bookingsSnapshot.docs[0];
-      linkedBookingId = bDoc.id;
-      await db.collection('bookings').doc(linkedBookingId).update({
-        status: 'active',
-        updatedAt: Date.now()
-      });
-    }
-
     // 3. Generate session ID
     const sessionId = `sess-${targetStationId}-${Date.now()}`;
     const startTime = new Date().toISOString();
 
-    // 4. Create the active session document — the client app listens for this
-    await db.collection('sessions').doc(sessionId).set({
-      sessionId,
-      stationId: targetStationId,
-      stationName: stationData.name || targetStationId,
-      userId: pendingUserId,
-      userName: pendingUserName,
-      bookingId: linkedBookingId, // Link the booking
-      status: 'active',           // Must match AppContext: find(s => s.status === 'active')
-      startTime,
-      energyDelivered: 0,
-      source: 'iot-hardware',
-    });
+    const writePromises = [];
 
-    // 4. Update the station to charging state and clear the pending user
-    await db.collection('stations').doc(targetStationId).update({
-      status: 'charging',
-      plugInUser: null,
-      plugInUserName: null,
-      activeSessionId: sessionId,
-      lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    if (!bookingsSnapshot.empty) {
+      const bDoc = bookingsSnapshot.docs[0];
+      linkedBookingId = bDoc.id;
+      writePromises.push(
+        db.collection('bookings').doc(linkedBookingId).update({
+          status: 'active',
+          updatedAt: Date.now()
+        })
+      );
+    }
+
+    // 4. Create the active session document
+    writePromises.push(
+      db.collection('sessions').doc(sessionId).set({
+        sessionId,
+        stationId: targetStationId,
+        stationName: stationData.name || targetStationId,
+        userId: pendingUserId,
+        userName: pendingUserName,
+        bookingId: linkedBookingId, // Link the booking
+        status: 'active',
+        startTime,
+        energyDelivered: 0,
+        source: 'iot-hardware',
+      })
+    );
+
+    // 4. Update the station to charging state
+    writePromises.push(
+      db.collection('stations').doc(targetStationId).update({
+        status: 'charging',
+        plugInUser: null,
+        plugInUserName: null,
+        activeSessionId: sessionId,
+        lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+      })
+    );
+
+    // Execute all database writes concurrently for maximum speed
+    await Promise.all(writePromises);
 
     // 5. Update in-memory state & broadcast
     if (stationState[targetStationId]) {
