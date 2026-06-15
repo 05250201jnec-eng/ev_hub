@@ -334,8 +334,20 @@ app.get('/api/ocpp-log', (req, res) => {
 });
 
 // Admin override: force a station status
+const hardwareToLogicalStation = {};
+
 app.post('/api/admin/override', async (req, res) => {
-  const { stationId, status, battery } = req.body;
+  let { stationId, status, battery } = req.body;
+
+  if (hardwareToLogicalStation[stationId]) {
+    const mappedId = hardwareToLogicalStation[stationId];
+    console.log(`[IoT-Hackathon] Translating incoming ${stationId} to ${mappedId}`);
+    stationId = mappedId;
+    if (status === 'available') {
+      delete hardwareToLogicalStation[req.body.stationId];
+    }
+  }
+
   if (!stationState[stationId]) {
     return res.status(404).json({ error: 'Station not found' });
   }
@@ -397,6 +409,7 @@ async function handleChargerPlugged(stationId) {
         pendingUserId = stationData.plugInUser;
         pendingUserName = stationData.plugInUserName;
         console.log(`[IoT-Hackathon] Rerouting plug event from ${stationId} to ${targetStationId}`);
+        hardwareToLogicalStation[stationId] = targetStationId;
       }
     }
 
