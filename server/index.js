@@ -381,33 +381,40 @@ async function handleChargerPlugged(stationId) {
 
   try {
     // 1. Read the pending user who scanned the QR code for this station
-    const stationDoc = await db.collection('stations').doc(stationId).get();
-    if (!stationDoc.exists) {
-      console.warn(`[IoT] Station ${stationId} not found in Firestore — falling back to in-memory simulation`);
-      simulateStartTransaction(stationId);
-      simulateStatusChange(stationId, 'charging');
-      return;
-    }
+    let targetStationId = stationId;
+    let stationDoc = await db.collection('stations').doc(targetStationId).get();
+    let stationData = stationDoc.exists ? stationDoc.data() : null;
+    let pendingUserId = stationData ? stationData.plugInUser : null;
+    let pendingUserName = stationData ? stationData.plugInUserName : null;
 
-    const stationData = stationDoc.data();
-    let pendingUserId = stationData.plugInUser;
-    let pendingUserName = stationData.plugInUserName;
-
-    // ── FALLBACK: No pre-registered user (QR not scanned or race condition) ──
+    // ── HACKATHON FORGIVENESS: If this station has no pending user, search ALL stations ──
     if (!pendingUserId) {
-      console.warn(`[IoT] No pending user at station ${stationId} — starting guest session via in-memory sim`);
+      const allPlugInStations = await db.collection('stations').where('status', '==', 'plug_in').get();
+      if (!allPlugInStations.empty) {
+        const foundDoc = allPlugInStations.docs[0];
+        targetStationId = foundDoc.id;
+        stationData = foundDoc.data();
+        pendingUserId = stationData.plugInUser;
+        pendingUserName = stationData.plugInUserName;
+        console.log(`[IoT-Hackathon] Rerouting plug event from ${stationId} to ${targetStationId}`);
+      }
+    }
+
+    // ── FALLBACK: Still no pre-registered user ──
+    if (!pendingUserId) {
+      console.warn(`[IoT] No pending user anywhere — starting guest session via in-memory sim for ${stationId}`);
       simulateStartTransaction(stationId);
       simulateStatusChange(stationId, 'charging');
       return;
     }
 
-    console.log(`[IoT] Starting session for user: ${pendingUserName} (${pendingUserId}) at ${stationId}`);
+    console.log(`[IoT] Starting session for user: ${pendingUserName} (${pendingUserId}) at ${targetStationId}`);
 
     // 2. Find the active booking for this user
     let linkedBookingId = null;
     const bookingsSnapshot = await db.collection('bookings')
       .where('userId', '==', pendingUserId)
-      .where('stationId', '==', stationId)
+      .where('stationId', '==', targetStationId)
       .where('status', 'in', ['pending', 'confirmed'])
       .get();
 
@@ -421,14 +428,14 @@ async function handleChargerPlugged(stationId) {
     }
 
     // 3. Generate session ID
-    const sessionId = `sess-${stationId}-${Date.now()}`;
+    const sessionId = `sess-${targetStationId}-${Date.now()}`;
     const startTime = new Date().toISOString();
 
     // 4. Create the active session document — the client app listens for this
     await db.collection('sessions').doc(sessionId).set({
       sessionId,
-      stationId,
-      stationName: stationData.name || stationId,
+      stationId: targetStationId,
+      stationName: stationData.name || targetStationId,
       userId: pendingUserId,
       userName: pendingUserName,
       bookingId: linkedBookingId, // Link the booking
@@ -439,7 +446,7 @@ async function handleChargerPlugged(stationId) {
     });
 
     // 4. Update the station to charging state and clear the pending user
-    await db.collection('stations').doc(stationId).update({
+    await db.collection('stations').doc(targetStationId).update({
       status: 'charging',
       plugInUser: null,
       plugInUserName: null,
@@ -448,23 +455,23 @@ async function handleChargerPlugged(stationId) {
     });
 
     // 5. Update in-memory state & broadcast
-    if (stationState[stationId]) {
-      stationState[stationId].status = 'charging';
-      stationState[stationId].sessionId = sessionId;
-      stationState[stationId].sessionStartTime = Date.now();
-      stationState[stationId].userId = pendingUserId;
-      stationState[stationId].energyDelivered = 0;
-      stationState[stationId].reached100Time = null;
+    if (stationState[targetStationId]) {
+      stationState[targetStationId].status = 'charging';
+      stationState[targetStationId].sessionId = sessionId;
+      stationState[targetStationId].sessionStartTime = Date.now();
+      stationState[targetStationId].userId = pendingUserId;
+      stationState[targetStationId].energyDelivered = 0;
+      stationState[targetStationId].reached100Time = null;
     }
 
     io.emit('station_status_update', {
-      stationId,
+      stationId: targetStationId,
       status: 'charging',
       color: STATUS_COLORS['charging'],
       timestamp: Date.now(),
     });
 
-    io.emit('session_started', { stationId, sessionId, userId: pendingUserId, startTime });
+    io.emit('session_started', { stationId: targetStationId, sessionId, userId: pendingUserId, startTime });
     console.log(`[IoT] Session ${sessionId} started successfully for ${pendingUserName}`);
 
   } catch (err) {
