@@ -93,13 +93,7 @@ const QRScannerModal = ({ onClose, onScanSuccess }) => {
           const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
           const todayStrings = [utcToday, localToday];
           
-          let stationId = decodedText;
-          if (decodedText.includes('universal') || decodedText === 'ev-hub-universal') {
-            stationId = 'universal';
-          } else if (decodedText.includes('/')) {
-            const parts = decodedText.split('/');
-            stationId = parts[parts.length - 1];
-          }
+          let stationId = 'universal'; // Force universal behavior for ALL scans to redirect to the reserved station
 
           const convert12to24 = (timeStr) => {
             if (!timeStr) return -1;

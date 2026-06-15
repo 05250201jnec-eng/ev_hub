@@ -347,12 +347,13 @@ export const AppProvider = ({ children }) => {
       };
 
       if (isAvailable && date === todayStr && convert12to24(time) === currentHour) {
-        await updateDoc(doc(db, 'stations', stationId), {
-          status: 'reserved',
-          reservedBy: user.name,
-          reservedUntil: time,
-          lastUpdated: Date.now(),
-        }).catch(() => {});
+        // DO NOT change to reserved, keep it available as per user request
+        // await updateDoc(doc(db, 'stations', stationId), {
+        //   status: 'reserved',
+        //   reservedBy: user.name,
+        //   reservedUntil: time,
+        //   lastUpdated: Date.now(),
+        // }).catch(() => {});
       }
       addNotification(`Slot booked for ${time} ✅`, 'success');
     } catch (error) {
