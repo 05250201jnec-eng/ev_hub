@@ -19,6 +19,13 @@
       "label": "Plug/Unplug"
     },
     {
+      "type": "wokwi-pushbutton",
+      "id": "btn1",
+      "top": -20,
+      "left": -150,
+      "attrs": { "color": "green", "label": "Change Station" }
+    },
+    {
       "type": "wokwi-led",
       "id": "led_red",
       "top": 50,
@@ -53,6 +60,9 @@
     [ "esp32:GND.1", "switch1:1", "black", [] ],
     [ "esp32:15", "switch1:2", "green", [] ],
     
+    [ "esp32:4", "btn1:1.l", "green", [] ],
+    [ "esp32:GND.1", "btn1:2.l", "black", [] ],
+
     [ "esp32:2", "r_red:1", "red", [] ],
     [ "r_red:2", "led_red:A", "red", [] ],
     [ "led_red:C", "esp32:GND.2", "black", [] ],

@@ -39,19 +39,46 @@ const char* password = "";
 const char* SERVER_URL = "https://ev-hub-fhid.onrender.com/api/admin/override";
 
 // ── Station Identity ──────────────────────────────────────────────────────────
-const char* STATION_ID   = "st-014";          // JNEC Solar Charging Hub
-const char* STATION_NAME = "JNEC Solar Hub";  // Shown on OLED
+struct Station {
+  const char* id;
+  const char* name;
+};
+
+const Station stations[] = {
+  {"st-001", "Thimphu City Center Charging Hub"},
+  {"st-002", "Paro Airport EV Hub"},
+  {"st-003", "Punakha Dzong Eco Charger"},
+  {"st-004", "Phuentsholing Border Charger"},
+  {"st-005", "Bumthang Valley Charging"},
+  {"st-006", "Wangdue Phodrang Station"},
+  {"st-007", "Trongsa Dzong Hub"},
+  {"st-008", "Mongar Town Station"},
+  {"st-009", "Trashigang District Hub"},
+  {"st-010", "Samdrup Jongkhar Center"},
+  {"st-011", "Gelephu City Hub"},
+  {"st-012", "Haa Valley Charging"},
+  {"st-013", "Samtse Border Hub"},
+  {"st-014", "JNEC Solar Charging Hub"}
+};
+const int NUM_STATIONS = sizeof(stations) / sizeof(Station);
+int currentStationIdx = 13; // Default to st-014
+
+String getStationId() { return stations[currentStationIdx].id; }
+String getStationName() { return stations[currentStationIdx].name; }
 
 // ── Pin Definitions ───────────────────────────────────────────────────────────
 const int SWITCH_PIN = 15;   // Slide switch → GND (INPUT_PULLUP)
 const int LED_PIN    = 2;    // Red LED (charging indicator)
 const int POT_PIN    = 32;   // Potentiometer (battery % sim)
+const int BTN_PIN    = 4;    // Button to change station
 
 // ── State Tracking ────────────────────────────────────────────────────────────
 bool lastSwitchState   = false;
 int  lastBatteryPct    = -1;
 bool lastOledState     = false;
 int  lastOledBattery   = -1;
+int  lastStationIdx    = currentStationIdx;
+bool lastBtnState      = true;
 
 // Rate-limit server calls: send immediately on switch flip,
 // then max once every 5 seconds for battery dial changes
@@ -86,7 +113,7 @@ void sendStatusUpdate(String status, int batteryPct) {
 
   // Build JSON payload
   String payload = "{\"stationId\":\"";
-  payload += STATION_ID;
+  payload += getStationId();
   payload += "\",\"status\":\"";
   payload += status;
   payload += "\",\"battery\":";
@@ -120,7 +147,7 @@ void updateOLED(bool isCharging, int batteryPct) {
     display.print("=== EV STATION ===");
 
     display.setCursor(15, 20);
-    display.print(STATION_NAME);
+    display.print(getStationName());
 
     display.setCursor(20, 34);
     display.print("Status:  FREE");
@@ -161,6 +188,7 @@ void setup() {
 
   // Pin setup
   pinMode(SWITCH_PIN, INPUT_PULLUP);
+  pinMode(BTN_PIN, INPUT_PULLUP);
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
 
@@ -187,7 +215,7 @@ void setup() {
   }
   Serial.printf("\n[WiFi] ✓ Connected! IP: %s\n", WiFi.localIP().toString().c_str());
 
-  oledMsg("WiFi Connected!", STATION_NAME);
+  oledMsg("WiFi Connected!", getStationName().c_str());
   delay(1200);
 
   // Show initial available screen
@@ -198,14 +226,23 @@ void setup() {
 // ── Loop ──────────────────────────────────────────────────────────────────────
 void loop() {
   bool currentSwitch = (digitalRead(SWITCH_PIN) == LOW);
+  bool currentBtn    = (digitalRead(BTN_PIN) == LOW);
 
   // Read potentiometer → battery percentage
   int potValue     = analogRead(POT_PIN);
   int batteryPct   = map(potValue, 0, 4095, 0, 100);
 
+  // Handle station change button
+  if (currentBtn && !lastBtnState && !currentSwitch) {
+    currentStationIdx = (currentStationIdx + 1) % NUM_STATIONS;
+    Serial.printf("[Station] Changed to %s (%s)\n", getStationId().c_str(), getStationName().c_str());
+  }
+  lastBtnState = currentBtn;
+
   unsigned long now      = millis();
   bool switchChanged     = (currentSwitch != lastSwitchState);
   bool batteryChanged    = (abs(batteryPct - lastBatteryPct) >= 2); // ignore < 2% noise
+  bool stationChanged    = (currentStationIdx != lastStationIdx);
 
   // ── Server update ─────────────────────────────────────────────────────────
   // Send immediately on switch flip, or throttled every 5s for battery changes
@@ -230,9 +267,10 @@ void loop() {
   }
 
   // ── OLED update (instant — no rate limiting) ──────────────────────────────
-  if (currentSwitch != lastOledState || batteryPct != lastOledBattery) {
+  if (currentSwitch != lastOledState || batteryPct != lastOledBattery || stationChanged) {
     lastOledState   = currentSwitch;
     lastOledBattery = batteryPct;
+    lastStationIdx  = currentStationIdx;
     updateOLED(currentSwitch, batteryPct);
   }
 
