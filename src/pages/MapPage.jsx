@@ -675,6 +675,7 @@ const MapPage = () => {
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
             <span className={`status-badge status-${currentSelected.status || 'available'}`}>
               {(currentSelected.status === 'locked' ? 'CONNECTOR ISSUE' : 
+                currentSelected.status === 'offline' ? 'INACTIVE' :
                 currentSelected.status || 'available').toUpperCase()}
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.85rem', fontWeight: 700, color: '#f59e0b' }}><Star size={14} fill="#f59e0b" /> {currentSelected.rating || '4.5'}</div>
