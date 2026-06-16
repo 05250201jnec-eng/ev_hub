@@ -688,8 +688,9 @@ const MapPage = () => {
             marginTop: '0.5rem'
           }}>
             <img 
-              src="/station-preview.png" 
+              src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80"
               alt={currentSelected.name} 
+              onError={(e) => { e.target.src = '/station-preview.png'; }}
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
             <div style={{ 
