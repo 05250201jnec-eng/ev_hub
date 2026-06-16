@@ -10,6 +10,8 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import BookingModal from '../components/BookingModal';
 import { bhutanBorder } from '../data/bhutanBorder';
+import bhutanPostImg from '../assets/bhutan-post-station.png';
+import defaultStationImg from '../assets/station-preview.png';
 
 // Fix for default marker icons
 delete L.Icon.Default.prototype._getIconUrl;
@@ -717,9 +719,8 @@ const MapPage = () => {
             marginTop: '0.5rem'
           }}>
             <img
-              src={currentSelected.id === 'st-001' ? '/bhutan-post-station.png' : '/station-preview.png'}
+              src={currentSelected.id === 'st-001' ? bhutanPostImg : defaultStationImg}
               alt={currentSelected.name}
-              onError={(e) => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=600&q=80'; }}
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
             <div style={{
