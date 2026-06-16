@@ -100,6 +100,7 @@ const Dashboard = () => {
 
   const statusLabel = s => {
     if (s === 'charging' || s === 'occupied') return 'CHARGING';
+    if (s === 'offline') return 'INACTIVE';
     return s.toUpperCase();
   };
 
@@ -211,7 +212,7 @@ const Dashboard = () => {
         />
         <StatCard
           icon={<Radio size={22} color="white" />}
-          label="Offline"
+          label="Inactive"
           value={offline}
           gradient="linear-gradient(135deg, #ef4444, #dc2626)"
           sub="Needs attention"
@@ -326,7 +327,7 @@ const Dashboard = () => {
             {[
               { label: 'Available', count: available, total: stations.length, color: '#10b981' },
               { label: 'In Use', count: charging, total: stations.length, color: '#f59e0b' },
-              { label: 'Offline', count: offline, total: stations.length, color: '#ef4444' },
+              { label: 'Inactive', count: offline, total: stations.length, color: '#ef4444' },
             ].map(({ label, count, total, color }) => (
               <div key={label} style={{ marginBottom: '1rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.375rem', fontSize: '0.8125rem' }}>
