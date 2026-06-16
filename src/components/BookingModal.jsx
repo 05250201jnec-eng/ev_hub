@@ -6,7 +6,11 @@ const BookingModal = ({ station, onClose }) => {
   const { bookSlot } = useAppContext();
   const [selectedConnector, setSelectedConnector] = useState('');
   const [selectedTime, setSelectedTime] = useState(station?.prefillTime || '');
-  const [selectedDate, setSelectedDate] = useState(station?.prefillDate || new Date().toISOString().split('T')[0]);
+  const getLocalDateStr = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+  const [selectedDate, setSelectedDate] = useState(station?.prefillDate || getLocalDateStr());
   const [duration, setDuration] = useState('30');
   const [selectedPayment, setSelectedPayment] = useState('bob');
   const [step, setStep] = useState(1); // 1: details, 2: payment

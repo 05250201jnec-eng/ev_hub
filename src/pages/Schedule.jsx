@@ -13,24 +13,30 @@ const STATUS_COLORS = {
 
 const Schedule = () => {
   const { stations, bookings } = useAppContext();
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [selectedStationForBooking, setSelectedStationForBooking] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  });
 
-  // Generate 7 days for date selector
+  // Generate 7 days using LOCAL date to avoid UTC midnight mismatch
   const dates = useMemo(() => {
     const arr = [];
     for (let i = 0; i < 7; i++) {
       const d = new Date();
       d.setDate(d.getDate() + i);
-      arr.push(d.toISOString().split('T')[0]);
+      arr.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
     }
     return arr;
   }, []);
 
   const getSlotStatus = (station, date, hour) => {
     const now = new Date();
-    const isToday = date === now.toISOString().split('T')[0];
+    // Use LOCAL date (not UTC) to avoid midnight timezone issues in Bhutan (UTC+6)
+    const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const utcToday = now.toISOString().split('T')[0];
+    const isToday = date === localToday || date === utcToday;
     const currentHour = now.getHours();
 
     const convert12to24 = (timeStr) => {
@@ -46,22 +52,21 @@ const Schedule = () => {
 
     if (isToday && hour < currentHour) return 'past';
 
-    // 1. Check explicit bookings first (The most accurate source)
+    // 1. Check explicit bookings — match against BOTH local and UTC date variants
     const slotBooking = bookings.find(b => 
       b.stationId === station.id && 
-      b.date === date && 
+      (b.date === date || b.date === localToday || b.date === utcToday || !b.date) && 
       convert12to24(b.time) === hour &&
-      ['pending', 'confirmed', 'charging'].includes(b.status)
+      ['pending', 'confirmed', 'active'].includes(b.status)
     );
 
     if (slotBooking) {
-      return slotBooking.status === 'charging' ? 'charging' : 'reserved';
+      return slotBooking.status === 'active' ? 'charging' : 'reserved';
     }
 
     // 2. Fallback to real-time status ONLY if someone is physically charging right now
     if (isToday && hour === currentHour) {
       if (station.status === 'charging' || station.status === 'occupied') return 'charging';
-      // Removed global 'reserved' fallback to prevent 9am booking from affecting 7am UI
     }
 
     return 'available';

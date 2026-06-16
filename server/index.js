@@ -338,13 +338,28 @@ const hardwareToLogicalStation = {};
 
 app.post('/api/admin/override', async (req, res) => {
   let { stationId, status, battery } = req.body;
+  const originalStationId = stationId;
+
+  // Failsafe: if the hardware station ACTUALLY has a plug_in user waiting right now,
+  // we must clear any old hackathon mapping so it can connect properly!
+  if (db && status === 'charging') {
+    try {
+      const hwDoc = await db.collection('stations').doc(originalStationId).get();
+      if (hwDoc.exists && hwDoc.data().status === 'plug_in') {
+        if (hardwareToLogicalStation[originalStationId]) {
+          console.log(`[IoT-Hackathon] Clearing old mapping for ${originalStationId} because it has a legitimate plug_in user!`);
+          delete hardwareToLogicalStation[originalStationId];
+        }
+      }
+    } catch (e) { console.error('Failsafe check error', e); }
+  }
 
   if (hardwareToLogicalStation[stationId]) {
     const mappedId = hardwareToLogicalStation[stationId];
     console.log(`[IoT-Hackathon] Translating incoming ${stationId} to ${mappedId}`);
     stationId = mappedId;
     if (status === 'available') {
-      delete hardwareToLogicalStation[req.body.stationId];
+      delete hardwareToLogicalStation[originalStationId];
     }
   }
 

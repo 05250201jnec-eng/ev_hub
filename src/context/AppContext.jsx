@@ -127,11 +127,17 @@ export const AppProvider = ({ children }) => {
             const diffMs = now - bookingDate;
             const diffMins = Math.floor(diffMs / 60000);
 
-            // If 15 minutes past the start time...
+            // If 15 minutes past the start time and no active session was created
             if (diffMins >= 15) {
               const station = stations.find(s => s.id === b.stationId);
-              // Only cancel if station is STILL reserved (meaning they didn't plug in)
-              if (station && station.status === 'reserved') {
+              // Cancel ONLY if the station is NOT actively charging (no real session started)
+              // We check activeSessionId since we no longer set status='reserved'
+              const stationIsCharging = station && (
+                station.status === 'charging' || 
+                station.status === 'occupied' ||
+                station.activeSessionId
+              );
+              if (!stationIsCharging) {
                 console.log(`[Auto-Release] Booking ${b.id} expired. User no-show.`);
                 
                 // 1. Mark booking as cancelled (no-show)
@@ -141,20 +147,13 @@ export const AppProvider = ({ children }) => {
                   updatedAt: Date.now() 
                 }).catch(() => {});
 
-                // 2. Release station
-                updateDoc(doc(db, 'stations', b.stationId), {
-                  status: 'available',
-                  reservedBy: null,
-                  reservedUntil: null,
-                  lastUpdated: Date.now()
-                }).catch(() => {});
-
-                // 3. Notify simulator
-                if (socketRef.current) {
-                  socketRef.current.emit('admin_override', { 
-                    stationId: b.stationId, 
-                    status: 'available' 
-                  });
+                // 2. Clear any reserved metadata from station (station stays 'available')
+                if (station) {
+                  updateDoc(doc(db, 'stations', b.stationId), {
+                    reservedBy: null,
+                    reservedUntil: null,
+                    lastUpdated: Date.now()
+                  }).catch(() => {});
                 }
               }
             }
@@ -384,15 +383,17 @@ export const AppProvider = ({ children }) => {
     if (!user) { addNotification('Please login first', 'error'); return; }
     
     setLoading(true);
-    // Default to today if dateStr is not provided
-    const date = dateStr || new Date().toISOString().split('T')[0];
+    // ALWAYS use LOCAL date so it matches the date picker (UTC date diverges after midnight in Bhutan UTC+6)
+    const now = new Date();
+    const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const date = dateStr || localToday;
 
     try {
       const hasConflict = bookings.find(b => 
         b.stationId === stationId && 
         b.date === date && 
         b.time.trim() === time.trim() && 
-        ['pending', 'confirmed', 'charging'].includes(b.status)
+        ['pending', 'confirmed', 'active'].includes(b.status)
       );
 
       if (hasConflict) {
@@ -442,7 +443,6 @@ export const AppProvider = ({ children }) => {
 
       if (isAvailable && todayStrings.includes(date) && convert12to24(time) === currentHour) {
         await updateDoc(doc(db, 'stations', stationId), {
-          status: 'reserved',
           reservedBy: user.name,
           reservedUntil: time,
           lastUpdated: Date.now(),

@@ -19,7 +19,7 @@ const Session = () => {
   }
 
   // Case 2: Manually started session via bookings (legacy flow)
-  const activeBooking = bookings?.find(b => b.status === 'charging');
+  const activeBooking = bookings?.find(b => b.status === 'active');
   if (activeBooking) {
     return (
       <div className="animate-fade-in">

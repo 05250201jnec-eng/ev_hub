@@ -100,10 +100,10 @@ void oledMsg(const char* line1, const char* line2 = "") {
 }
 
 // ── Send HTTP POST to Render ──────────────────────────────────────────────────
-void sendStatusUpdate(String status, int batteryPct) {
+bool sendStatusUpdate(String status, int batteryPct) {
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("[HTTP] Wi-Fi not connected — skipping");
-    return;
+    return false;
   }
 
   HTTPClient http;
@@ -125,14 +125,17 @@ void sendStatusUpdate(String status, int batteryPct) {
 
   int code = http.POST(payload);
 
+  bool success = false;
   if (code > 0) {
     Serial.printf("[HTTP] Response %d: %s\n", code, http.getString().c_str());
+    success = (code == 200);
   } else {
     // Common causes: Render cold-start (wait 30-60s), or network issue
     Serial.printf("[HTTP] Error %d — Render may be waking up, retrying next cycle\n", code);
   }
 
   http.end();
+  return success;
 }
 
 // ── OLED Status Screen ────────────────────────────────────────────────────────
@@ -251,18 +254,25 @@ void loop() {
                      (now - lastServerUpdate >= SERVER_UPDATE_MS));
 
   if (shouldPost) {
-    lastSwitchState  = currentSwitch;
-    lastBatteryPct   = batteryPct;
-    lastServerUpdate = now;
-
+    bool success;
     if (currentSwitch) {
       digitalWrite(LED_PIN, HIGH);
       Serial.println("[Switch] ON → Charging");
-      sendStatusUpdate("charging", batteryPct);
+      success = sendStatusUpdate("charging", batteryPct);
     } else {
       digitalWrite(LED_PIN, LOW);
       Serial.println("[Switch] OFF → Available");
-      sendStatusUpdate("available", batteryPct);
+      success = sendStatusUpdate("available", batteryPct);
+    }
+
+    if (success) {
+      lastSwitchState  = currentSwitch;
+      lastBatteryPct   = batteryPct;
+      lastServerUpdate = now;
+    } else {
+      Serial.println("[HTTP] POST failed. Will retry in 3 seconds...");
+      delay(3000);
+      lastServerUpdate = now; // Prevent battery throttling from bypassing the retry
     }
   }
 

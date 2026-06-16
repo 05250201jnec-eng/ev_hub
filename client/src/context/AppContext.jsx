@@ -281,8 +281,10 @@ export const AppProvider = ({ children }) => {
     if (!user) { addNotification('Please login first', 'error'); return; }
     
     setLoading(true);
-    // Default to today if dateStr is not provided
-    const date = dateStr || new Date().toISOString().split('T')[0];
+    // ALWAYS use LOCAL date so it matches the date picker (UTC date diverges after midnight in Bhutan UTC+6)
+    const nowLocal = new Date();
+    const localToday = `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, '0')}-${String(nowLocal.getDate()).padStart(2, '0')}`;
+    const date = dateStr || localToday;
 
     try {
       // 1. STRIcT CONFLICT CHECK via Firestore (prevents race conditions/closure staleness)
@@ -291,7 +293,7 @@ export const AppProvider = ({ children }) => {
         where('stationId', '==', stationId),
         where('date', '==', date),
         where('time', '==', time),
-        where('status', 'in', ['pending', 'confirmed', 'charging'])
+        where('status', 'in', ['pending', 'confirmed', 'active'])
       );
       const snapshot = await getDocs(q);
 
@@ -306,7 +308,7 @@ export const AppProvider = ({ children }) => {
          b.stationId === stationId && 
          !b.date && 
          b.time.trim() === time.trim() && 
-         ['pending', 'confirmed', 'charging'].includes(b.status)
+         ['pending', 'confirmed', 'active'].includes(b.status)
       );
 
       if (oldConflict) {
@@ -348,12 +350,11 @@ export const AppProvider = ({ children }) => {
 
       if (isAvailable && date === todayStr && convert12to24(time) === currentHour) {
         // DO NOT change to reserved, keep it available as per user request
-        // await updateDoc(doc(db, 'stations', stationId), {
-        //   status: 'reserved',
-        //   reservedBy: user.name,
-        //   reservedUntil: time,
-        //   lastUpdated: Date.now(),
-        // }).catch(() => {});
+        await updateDoc(doc(db, 'stations', stationId), {
+          reservedBy: user.name,
+          reservedUntil: time,
+          lastUpdated: Date.now(),
+        }).catch(() => {});
       }
       addNotification(`Slot booked for ${time} ✅`, 'success');
     } catch (error) {

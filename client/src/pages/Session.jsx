@@ -9,7 +9,7 @@ const Session = () => {
   const navigate = useNavigate();
 
   // Find the currently active charging session
-  const activeBooking = bookings?.find(b => b.status === 'charging');
+  const activeBooking = bookings?.find(b => b.status === 'active');
 
   if (!activeBooking) {
     return (
