@@ -17,7 +17,7 @@ import {
 
 const navItems = [
   { name: 'Dashboard',        path: '/',                    icon: <LayoutDashboard size={18} /> },
-  { name: 'Charger Management', path: '/chargers',          icon: <Zap size={18} /> },
+  { name: 'Station Management', path: '/chargers',          icon: <Zap size={18} /> },
   { name: 'OCPP Monitoring',  path: '/ocpp',                icon: <Activity size={18} /> },
   { name: 'User Management',  path: '/users',               icon: <Users size={18} /> },
   { name: 'Schedule',         path: '/schedule',            icon: <Clock size={18} /> },
