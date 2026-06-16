@@ -9,9 +9,9 @@ export const EV_STATIONS = [
     },
     status: "available",
     connectors: [
-      { id: "c1", type: "CCS2", power: "50kW", status: "available", price: "Nu 15/kWh" },
-      { id: "c2", type: "CHAdeMO", power: "50kW", status: "occupied", price: "Nu 15/kWh" },
-      { id: "c3", type: "Type 2", power: "22kW", status: "available", price: "Nu 10/kWh" }
+      { id: "c1", type: "DC Connector", power: "50kW", status: "available", price: "Nu 15/kWh" },
+      { id: "c2", type: "DC Connector", power: "50kW", status: "occupied", price: "Nu 15/kWh" },
+      { id: "c3", type: "AC Connector", power: "22kW", status: "available", price: "Nu 10/kWh" }
     ],
     rating: 4.8,
     amenities: ["Restroom", "Cafe", "WiFi"],
@@ -27,8 +27,8 @@ export const EV_STATIONS = [
     },
     status: "available",
     connectors: [
-      { id: "c1", type: "CCS2", power: "120kW", status: "available", price: "Nu 20/kWh" },
-      { id: "c2", type: "GBT", power: "120kW", status: "available", price: "Nu 20/kWh" },
+      { id: "c1", type: "DC Connector", power: "120kW", status: "available", price: "Nu 20/kWh" },
+      { id: "c2", type: "DC Connector", power: "120kW", status: "available", price: "Nu 20/kWh" },
     ],
     rating: 4.9,
     amenities: ["Shopping", "Restroom", "Restaurant"],
@@ -44,8 +44,8 @@ export const EV_STATIONS = [
     },
     status: "occupied",
     connectors: [
-      { id: "c1", type: "CCS2", power: "50kW", status: "available", price: "Nu 12/kWh" },
-      { id: "c2", type: "Type 2", power: "22kW", status: "occupied", price: "Nu 10/kWh" }
+      { id: "c1", type: "DC Connector", power: "50kW", status: "available", price: "Nu 12/kWh" },
+      { id: "c2", type: "AC Connector", power: "22kW", status: "occupied", price: "Nu 10/kWh" }
     ],
     rating: 4.5,
     amenities: ["Restroom", "Sightseeing"],
@@ -61,7 +61,7 @@ export const EV_STATIONS = [
     },
     status: "offline",
     connectors: [
-      { id: "c1", type: "CCS2", power: "50kW", status: "offline", price: "Nu 15/kWh" },
+      { id: "c1", type: "DC Connector", power: "50kW", status: "offline", price: "Nu 15/kWh" },
     ],
     rating: 3.5,
     amenities: ["Shopping", "Restroom"],
@@ -77,8 +77,8 @@ export const EV_STATIONS = [
     },
     status: "available",
     connectors: [
-      { id: "c1", type: "CCS2", power: "50kW", status: "available", price: "Nu 18/kWh" },
-      { id: "c2", type: "Type 2", power: "22kW", status: "available", price: "Nu 15/kWh" }
+      { id: "c1", type: "DC Connector", power: "50kW", status: "available", price: "Nu 18/kWh" },
+      { id: "c2", type: "AC Connector", power: "22kW", status: "available", price: "Nu 15/kWh" }
     ],
     rating: 4.7,
     amenities: ["Cafe", "Sightseeing"],
@@ -94,8 +94,8 @@ export const EV_STATIONS = [
     },
     status: "available",
     connectors: [
-      { id: "c1", type: "CCS2", power: "50kW", status: "available", price: "Nu 16/kWh" },
-      { id: "c2", type: "Type 2", power: "22kW", status: "occupied", price: "Nu 11/kWh" }
+      { id: "c1", type: "DC Connector", power: "50kW", status: "available", price: "Nu 16/kWh" },
+      { id: "c2", type: "AC Connector", power: "22kW", status: "occupied", price: "Nu 11/kWh" }
     ],
     rating: 4.3,
     amenities: ["Restroom", "Restaurant"],
@@ -111,7 +111,7 @@ export const EV_STATIONS = [
     },
     status: "available",
     connectors: [
-      { id: "c1", type: "Type 2", power: "22kW", status: "available", price: "Nu 14/kWh" },
+      { id: "c1", type: "AC Connector", power: "22kW", status: "available", price: "Nu 14/kWh" },
     ],
     rating: 4.6,
     amenities: ["Sightseeing", "Cafe"],
@@ -127,7 +127,7 @@ export const EV_STATIONS = [
     },
     status: "available",
     connectors: [
-      { id: "c1", type: "CCS2", power: "50kW", status: "available", price: "Nu 17/kWh" },
+      { id: "c1", type: "DC Connector", power: "50kW", status: "available", price: "Nu 17/kWh" },
     ],
     rating: 4.2,
     amenities: ["Market", "WiFi"],
@@ -143,7 +143,7 @@ export const EV_STATIONS = [
     },
     status: "available",
     connectors: [
-      { id: "c1", type: "CCS2", power: "50kW", status: "available", price: "Nu 18/kWh" },
+      { id: "c1", type: "DC Connector", power: "50kW", status: "available", price: "Nu 18/kWh" },
     ],
     rating: 4.4,
     amenities: ["Restroom", "Cafe"],
@@ -159,7 +159,7 @@ export const EV_STATIONS = [
     },
     status: "available",
     connectors: [
-      { id: "c1", type: "CCS2", power: "50kW", status: "available", price: "Nu 15/kWh" },
+      { id: "c1", type: "DC Connector", power: "50kW", status: "available", price: "Nu 15/kWh" },
     ],
     rating: 4.1,
     amenities: ["Restroom", "Shopping"],
@@ -175,7 +175,7 @@ export const EV_STATIONS = [
     },
     status: "available",
     connectors: [
-      { id: "c1", type: "CCS2", power: "50kW", status: "available", price: "Nu 14/kWh" },
+      { id: "c1", type: "DC Connector", power: "50kW", status: "available", price: "Nu 14/kWh" },
     ],
     rating: 4.5,
     amenities: ["Market", "WiFi"],
@@ -191,7 +191,7 @@ export const EV_STATIONS = [
     },
     status: "available",
     connectors: [
-      { id: "c1", type: "Type 2", power: "22kW", status: "available", price: "Nu 12/kWh" },
+      { id: "c1", type: "AC Connector", power: "22kW", status: "available", price: "Nu 12/kWh" },
     ],
     rating: 4.7,
     amenities: ["Sightseeing", "WiFi"],
@@ -207,7 +207,7 @@ export const EV_STATIONS = [
     },
     status: "available",
     connectors: [
-      { id: "c1", type: "Type 2", power: "22kW", status: "available", price: "Nu 11/kWh" },
+      { id: "c1", type: "AC Connector", power: "22kW", status: "available", price: "Nu 11/kWh" },
     ],
     rating: 4.0,
     amenities: ["Shopping", "Restroom"],
@@ -223,8 +223,8 @@ export const EV_STATIONS = [
     },
     status: "available",
     connectors: [
-      { id: "c1", type: "GBT (Solar)", power: "22kW", status: "available", price: "Nu 12/kWh" },
-      { id: "c2", type: "Type 2 (Solar)", power: "22kW", status: "available", price: "Nu 12/kWh" }
+      { id: "c1", type: "DC Connector (Solar)", power: "22kW", status: "available", price: "Nu 12/kWh" },
+      { id: "c2", type: "AC Connector (Solar)", power: "22kW", status: "available", price: "Nu 12/kWh" }
     ],
     rating: 4.8,
     amenities: ["Restroom", "WiFi", "Library"],
