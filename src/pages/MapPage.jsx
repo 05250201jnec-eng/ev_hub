@@ -690,7 +690,7 @@ const MapPage = () => {
             marginTop: '0.5rem'
           }}>
             <img 
-              src={currentSelected.id === 'st-001' ? bhutanPostImg : defaultStationImg}
+              src={defaultStationImg}
               alt={currentSelected.name} 
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
