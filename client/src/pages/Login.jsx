@@ -12,7 +12,8 @@ const Login = () => {
     email: '',
     phone: '',
     vehicle: '',
-    password: ''
+    password: '',
+    confirmPassword: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -29,11 +30,14 @@ const Login = () => {
 
     try {
       if (isLogin) {
-        if (!formData.email || !formData.password) {
+        if (!formData.email || !formData.password || !formData.confirmPassword) {
           throw new Error('Please fill in all fields');
         }
+        if (formData.password !== formData.confirmPassword) {
+          throw new Error('Passwords do not match');
+        }
         const res = await login(formData.email, formData.password);
-        
+
         // RULE: Admin users go directly to the operator side
         if (formData.email.toLowerCase().endsWith('@evhub.com')) {
           window.location.href = import.meta.env.VITE_ADMIN_URL || 'http://localhost:5177';
@@ -111,7 +115,7 @@ const Login = () => {
             inset: 0,
             background: 'radial-gradient(circle at 30% 70%, rgba(59,130,246,0.1) 0%, transparent 60%)',
           }} />
-          
+
           <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
             <div style={{
               background: 'var(--accent-gradient)',
@@ -292,6 +296,38 @@ const Login = () => {
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
+              </div>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+                Confirm Password *
+              </label>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                background: 'var(--bg-tertiary)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-color)',
+                padding: '0 1rem',
+                transition: 'border-color 0.3s'
+              }}>
+                <Lock size={18} color="var(--text-secondary)" />
+                <input
+                  name="confirmPassword"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  style={{
+                    flex: 1,
+                    padding: '0.875rem',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-primary)',
+                    outline: 'none'
+                  }}
+                />
               </div>
             </div>
 
