@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Zap, Mail, Lock, User, Phone, Car, ArrowRight, Eye, EyeOff, Loader, Database } from 'lucide-react';
+import { Zap, Mail, Lock, User, Phone, Car, ArrowRight, Eye, EyeOff, Loader, Database, KeyRound } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
+import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 const Login = () => {
   const { login, register } = useAppContext();
@@ -17,6 +19,10 @@ const Login = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState('');
 
   const handleChange = (e) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -53,6 +59,27 @@ const Login = () => {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!forgotEmail) { setForgotMessage('Please enter your email'); return; }
+    setForgotLoading(true);
+    setForgotMessage('');
+    try {
+      const q = query(collection(db, 'users'), where('email', '==', forgotEmail.trim()));
+      const snapshot = await getDocs(q);
+      if (snapshot.empty) {
+        setForgotMessage('❌ No account found with this email');
+      } else {
+        const userDoc = snapshot.docs[0];
+        await updateDoc(doc(db, 'users', userDoc.id), { password: '123456' });
+        setForgotMessage('✅ Password has been reset to 123456. Please login and change it.');
+      }
+    } catch (err) {
+      setForgotMessage('❌ Error: ' + err.message);
+    } finally {
+      setForgotLoading(false);
     }
   };
 
@@ -331,6 +358,27 @@ const Login = () => {
               </div>
             </div>
 
+            {isLogin && (
+              <button
+                type="button"
+                onClick={() => { setShowForgot(true); setForgotMessage(''); setForgotEmail(formData.email); }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--accent-primary)',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  marginTop: '0.5rem',
+                  textAlign: 'right',
+                  display: 'block',
+                  marginLeft: 'auto'
+                }}
+              >
+                Forgot Password?
+              </button>
+            )}
+
             {!isLogin && (
               <>
                 <div>
@@ -434,6 +482,111 @@ const Login = () => {
           </p>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgot && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.6)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999
+        }}>
+          <div className="glass animate-fade-in" style={{
+            width: '100%',
+            maxWidth: '420px',
+            padding: '2rem',
+            borderRadius: 'var(--radius-lg)',
+            background: 'var(--bg-secondary)',
+            margin: '1rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+              <div style={{
+                background: 'rgba(59,130,246,0.1)',
+                padding: '0.5rem',
+                borderRadius: 'var(--radius-sm)',
+                color: 'var(--accent-primary)'
+              }}>
+                <KeyRound size={24} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Reset Password</h3>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Enter your email to reset your password</p>
+              </div>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              background: 'var(--bg-tertiary)',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--border-color)',
+              padding: '0 1rem',
+              marginBottom: '1rem'
+            }}>
+              <Mail size={18} color="var(--text-secondary)" />
+              <input
+                type="email"
+                placeholder="karma@example.bt"
+                value={forgotEmail}
+                onChange={(e) => setForgotEmail(e.target.value)}
+                style={{
+                  flex: 1,
+                  padding: '0.875rem',
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-primary)',
+                  outline: 'none'
+                }}
+              />
+            </div>
+
+            {forgotMessage && (
+              <p style={{
+                fontSize: '0.85rem',
+                padding: '0.75rem',
+                borderRadius: 'var(--radius-sm)',
+                background: forgotMessage.startsWith('✅') ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
+                border: `1px solid ${forgotMessage.startsWith('✅') ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                color: forgotMessage.startsWith('✅') ? '#10b981' : '#ef4444',
+                marginBottom: '1rem',
+                fontWeight: 600
+              }}>
+                {forgotMessage}
+              </p>
+            )}
+
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                onClick={() => setShowForgot(false)}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--text-primary)',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleForgotPassword}
+                disabled={forgotLoading}
+                className="btn btn-primary"
+                style={{ flex: 1, padding: '0.75rem' }}
+              >
+                {forgotLoading ? <Loader size={18} style={{ animation: 'spin 1s linear infinite' }} /> : 'Reset Password'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes pulse {
