@@ -5,7 +5,7 @@ export const EV_STATIONS = [
     location: {
       lat: 27.473575,
       lng: 89.639074,
-      address: "Norzin Lam, Thimphu",
+      address: "4 Chang Lam -III, Thimphu",
     },
     status: "available",
     connectors: [
