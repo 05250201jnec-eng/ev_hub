@@ -3,8 +3,8 @@ export const EV_STATIONS = [
     id: "st-001",
     name: "Thimphu City Center Charging Hub",
     location: {
-      lat: 27.472782,
-      lng: 89.639281,
+      lat: 27.473575,
+      lng: 89.639074,
       address: "Norzin Lam, Thimphu",
     },
     status: "available",
