@@ -47,7 +47,7 @@ const io = new Server(httpServer, {
 
 // ─── OCPP Station Definitions (mirrors Firestore stations) ────────────────────
 const STATIONS = [
-  { id: 'st-001', name: 'Thimphu City Center Charging Hub' },
+  { id: 'st-001', name: 'Bhutan Post Corporation Parking' },
   { id: 'st-002', name: 'Paro Airport EV Hub' },
   { id: 'st-003', name: 'Punakha Dzong Eco Charger' },
   { id: 'st-004', name: 'Phuentsholing Border Charger' },

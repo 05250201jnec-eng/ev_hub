@@ -1,7 +1,7 @@
 export const EV_STATIONS = [
   {
     id: "st-001",
-    name: "Thimphu City Center Charging Hub",
+    name: "Bhutan Post Corporation Parking",
     location: {
       lat: 27.473575,
       lng: 89.639074,
@@ -243,7 +243,7 @@ export const MOCK_USER = {
     {
       id: "h-001",
       date: "2026-05-10T14:30:00Z",
-      station: "Thimphu City Center Charging Hub",
+      station: "Bhutan Post Corporation Parking",
       energy: "15 kWh",
       cost: "Nu 225",
       duration: "45 mins"
