@@ -717,9 +717,9 @@ const MapPage = () => {
             marginTop: '0.5rem'
           }}>
             <img
-              src="https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=600&q=80"
+              src={currentSelected.id === 'st-001' ? '/bhutan-post-station.png' : '/station-preview.png'}
               alt={currentSelected.name}
-              onError={(e) => { e.target.src = '/station-preview.png'; }}
+              onError={(e) => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=600&q=80'; }}
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
             <div style={{
