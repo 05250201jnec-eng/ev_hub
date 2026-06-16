@@ -7,6 +7,7 @@ const Signup = () => {
   const { register } = useAppContext();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -14,6 +15,7 @@ const Signup = () => {
     vehicle: '',
     password: ''
   });
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -30,6 +32,12 @@ const Signup = () => {
     try {
       if (!formData.name || !formData.email || !formData.password) {
         throw new Error('Please fill in all required fields');
+      }
+      if (formData.password !== confirmPassword) {
+        throw new Error('Passwords do not match');
+      }
+      if (formData.password.length < 6) {
+        throw new Error('Password must be at least 6 characters');
       }
       await register(formData);
       navigate('/');
@@ -282,6 +290,49 @@ const Signup = () => {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+                Confirm Password *
+              </label>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                background: 'var(--bg-tertiary)',
+                borderRadius: 'var(--radius-md)',
+                border: `1px solid ${confirmPassword && confirmPassword !== formData.password ? '#ef4444' : 'var(--border-color)'}`,
+                padding: '0 1rem',
+                transition: 'border-color 0.3s'
+              }}>
+                <Lock size={18} color={confirmPassword && confirmPassword !== formData.password ? '#ef4444' : 'var(--text-secondary)'} />
+                <input
+                  name="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => { setConfirmPassword(e.target.value); setError(''); }}
+                  style={{
+                    flex: 1,
+                    padding: '0.875rem',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-primary)',
+                    outline: 'none'
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={{ color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem' }}
+                >
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+              {confirmPassword && confirmPassword !== formData.password && (
+                <p style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.35rem', fontWeight: 600 }}>Passwords do not match</p>
+              )}
             </div>
 
             <div>
